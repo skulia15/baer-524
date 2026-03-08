@@ -1,4 +1,5 @@
 import { ApproveDeclineForm } from '@/components/forms/approve-decline-form'
+import { CancelForm } from '@/components/forms/cancel-form'
 import { formatDay } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/server'
 import { ArrowLeftRight, ChevronLeft } from 'lucide-react'
@@ -36,8 +37,15 @@ export default async function SkiptiDetailPage({
 
   if (!swap) redirect('/tilkynningar')
 
+  const hhAId = (swap.household_a as { id: string }).id
+  const hhBId = (swap.household_b as { id: string }).id
   const canApprove =
     profile?.role === 'head' &&
+    ((swap.status === 'pending_own_head' && profile.household_id === hhAId) ||
+      (swap.status === 'pending_other_head' && profile.household_id === hhBId))
+
+  const canCancel =
+    profile?.household_id === hhAId &&
     (swap.status === 'pending_own_head' || swap.status === 'pending_other_head')
 
   const hhA = swap.household_a as { name: string }
@@ -90,6 +98,7 @@ export default async function SkiptiDetailPage({
       </div>
 
       {canApprove && <ApproveDeclineForm type="swap" id={swapId} />}
+      {canCancel && <CancelForm type="swap" id={swapId} />}
     </div>
   )
 }

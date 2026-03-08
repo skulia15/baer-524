@@ -1,4 +1,5 @@
 import { ApproveDeclineForm } from '@/components/forms/approve-decline-form'
+import { CancelForm } from '@/components/forms/cancel-form'
 import { formatDay } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft } from 'lucide-react'
@@ -46,6 +47,10 @@ export default async function BidniDetailPage({
     profile?.role === 'head' &&
     (request.status === 'pending_own_head' || request.status === 'pending_releasing_head')
 
+  const canCancel =
+    profile?.household_id === request.requesting_household_id &&
+    (request.status === 'pending_own_head' || request.status === 'pending_releasing_head')
+
   return (
     <div className="px-4 py-4">
       <div className="mb-4 flex items-center gap-2">
@@ -79,6 +84,7 @@ export default async function BidniDetailPage({
       </div>
 
       {canApprove && <ApproveDeclineForm type="request" id={requestId} />}
+      {canCancel && <CancelForm type="request" id={requestId} />}
     </div>
   )
 }
