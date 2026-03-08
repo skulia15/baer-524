@@ -137,9 +137,7 @@ export function MonthGrid({
                     className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${
                       isToday
                         ? 'bg-stone-900 text-white'
-                        : isOwn && !isShared
-                          ? 'text-stone-900'
-                          : 'text-stone-500'
+                        : 'text-stone-900'
                     }`}
                   >
                     {day}

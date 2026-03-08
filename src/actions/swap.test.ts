@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }))
 
 import { createClient } from '@/lib/supabase/server'
-import { approveSwap, declineSwap, cancelSwap, createSwap } from './swap'
+import { approveSwap, cancelSwap, createSwap, declineSwap } from './swap'
 
 type MockSupabase = ReturnType<typeof createClient> extends Promise<infer T> ? T : never
 
@@ -77,7 +77,7 @@ describe('approveSwap', () => {
   it('returns error if user is not a head', async () => {
     mockAsRole('member')
     const result = await approveSwap('swap-1')
-    expect(result.error).toBe('Aðeins yfirmenn geta samþykkt')
+    expect(result.error).toBe('Aðeins eigendur geta samþykkt')
   })
 })
 
@@ -91,7 +91,7 @@ describe('declineSwap', () => {
   it('returns error if user is not a head', async () => {
     mockAsRole('member')
     const result = await declineSwap('swap-1')
-    expect(result.error).toBe('Aðeins yfirmenn geta hafnað')
+    expect(result.error).toBe('Aðeins eigendur geta hafnað')
   })
 })
 

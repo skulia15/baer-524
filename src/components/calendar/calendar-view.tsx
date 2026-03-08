@@ -24,7 +24,7 @@ export function CalendarView({
   year,
   onYearChange,
 }: CalendarViewProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid')
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
 

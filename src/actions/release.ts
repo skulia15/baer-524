@@ -100,6 +100,44 @@ export async function releaseDays(weekAllocationId: string, dates: string[]) {
   }
 }
 
+export async function setDayPlans(weekAllocationId: string, dates: string[]) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Ekki innskráður' }
+
+  const { data: profile } = await supabase
+    .from('profile')
+    .select('household_id')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Prófíll ekki fundinn' }
+
+  const { data: alloc } = await supabase
+    .from('week_allocation')
+    .select('household_id')
+    .eq('id', weekAllocationId)
+    .single()
+  if (!alloc || alloc.household_id !== profile.household_id) return { error: 'Ekki heimild' }
+
+  await supabase.from('day_plan').delete().eq('week_allocation_id', weekAllocationId)
+
+  if (dates.length > 0) {
+    const { error } = await supabase.from('day_plan').insert(
+      dates.map((date) => ({
+        week_allocation_id: weekAllocationId,
+        date,
+        household_id: profile.household_id,
+      })),
+    )
+    if (error) return { error: error.message }
+  }
+
+  return { success: true }
+}
+
 export async function retractRelease(dayReleaseIds: string[]) {
   const supabase = await createClient()
 

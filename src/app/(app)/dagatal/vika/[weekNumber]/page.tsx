@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
 import { WeekDetailView } from '@/components/week/week-detail-view'
 import { WeekSwipeWrapper } from '@/components/week/week-swipe-wrapper'
+import { createClient } from '@/lib/supabase/server'
+import { notFound, redirect } from 'next/navigation'
 
 export default async function WeekPage({
   params,
@@ -45,6 +45,11 @@ export default async function WeekPage({
     .select('*')
     .eq('week_allocation_id', allocation.id)
 
+  const { data: plans } = await supabase
+    .from('day_plan')
+    .select('*')
+    .eq('week_allocation_id', allocation.id)
+
   const { data: allWeeks } = await supabase
     .from('week_allocation')
     .select('week_number')
@@ -62,6 +67,7 @@ export default async function WeekPage({
         allocation={allocation}
         household={household ?? null}
         releases={releases ?? []}
+        plans={plans ?? []}
         profile={profile}
         prevWeek={prevWeek}
         nextWeek={nextWeek}

@@ -110,13 +110,9 @@ export async function approveSwap(swapId: string) {
     .select('role, household_id')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.role !== 'head') return { error: 'Aðeins yfirmenn geta samþykkt' }
+  if (!profile || profile.role !== 'head') return { error: 'Aðeins eigendur geta samþykkt' }
 
-  const { data: swap } = await supabase
-    .from('swap_proposal')
-    .select('*')
-    .eq('id', swapId)
-    .single()
+  const { data: swap } = await supabase.from('swap_proposal').select('*').eq('id', swapId).single()
   if (!swap) return { error: 'Skiptatillaga ekki fundin' }
 
   if (swap.status === 'pending_own_head') {
@@ -124,10 +120,7 @@ export async function approveSwap(swapId: string) {
       return { error: 'Þú getur ekki samþykkt þessa tillögu' }
     }
 
-    await supabase
-      .from('swap_proposal')
-      .update({ status: 'pending_other_head' })
-      .eq('id', swapId)
+    await supabase.from('swap_proposal').update({ status: 'pending_other_head' }).eq('id', swapId)
 
     const { data: otherHead } = await supabase
       .from('profile')
@@ -206,12 +199,8 @@ export async function declineSwap(swapId: string, reason?: string) {
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Ekki innskráður' }
 
-  const { data: profile } = await supabase
-    .from('profile')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  if (!profile || profile.role !== 'head') return { error: 'Aðeins yfirmenn geta hafnað' }
+  const { data: profile } = await supabase.from('profile').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'head') return { error: 'Aðeins eigendur geta hafnað' }
 
   const { data: swap } = await supabase
     .from('swap_proposal')

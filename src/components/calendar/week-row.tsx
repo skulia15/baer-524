@@ -37,7 +37,7 @@ export function WeekRow({
 
   const barStyle = isShared
     ? { backgroundColor: '#9ca3af', color: '#ffffff' }
-    : isFullyReleased && household
+    : isOwn && isFullyReleased && household
       ? getHouseholdFadedStyle(household.color)
       : household
         ? getHouseholdStyle(household.color)

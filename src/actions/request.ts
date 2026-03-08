@@ -95,13 +95,11 @@ export async function approveRequest(requestId: string) {
     .select('role, household_id')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.role !== 'head') return { error: 'Aðeins yfirmenn geta samþykkt' }
+  if (!profile || profile.role !== 'head') return { error: 'Aðeins eigendur geta samþykkt' }
 
   const { data: request } = await supabase
     .from('request')
-    .select(
-      '*, allocation:target_week_allocation_id(household_id, week_number, year_id)',
-    )
+    .select('*, allocation:target_week_allocation_id(household_id, week_number, year_id)')
     .eq('id', requestId)
     .single()
   if (!request) return { error: 'Beiðni ekki fundin' }
@@ -117,10 +115,7 @@ export async function approveRequest(requestId: string) {
       return { error: 'Þú getur ekki samþykkt þessa beiðni' }
     }
 
-    await supabase
-      .from('request')
-      .update({ status: 'pending_releasing_head' })
-      .eq('id', requestId)
+    await supabase.from('request').update({ status: 'pending_releasing_head' }).eq('id', requestId)
 
     const { data: releasingHead } = await supabase
       .from('profile')
@@ -148,14 +143,15 @@ export async function approveRequest(requestId: string) {
       return { error: 'Þú getur ekki samþykkt þessa beiðni' }
     }
 
-    const { error: claimErr } = await supabase
-      .from('day_release')
-      .update({
-        status: 'claimed',
+    const { error: claimErr } = await supabase.from('day_release').upsert(
+      request.requested_days.map((date: string) => ({
+        week_allocation_id: request.target_week_allocation_id,
+        date,
+        status: 'claimed' as const,
         claimed_by_household_id: request.requesting_household_id,
-      })
-      .eq('week_allocation_id', request.target_week_allocation_id)
-      .in('date', request.requested_days)
+      })),
+      { onConflict: 'week_allocation_id,date' },
+    )
 
     if (claimErr) return { error: claimErr.message }
 
@@ -216,12 +212,8 @@ export async function declineRequest(requestId: string, reason?: string) {
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Ekki innskráður' }
 
-  const { data: profile } = await supabase
-    .from('profile')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  if (!profile || profile.role !== 'head') return { error: 'Aðeins yfirmenn geta hafnað' }
+  const { data: profile } = await supabase.from('profile').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'head') return { error: 'Aðeins eigendur geta hafnað' }
 
   const { data: request } = await supabase
     .from('request')

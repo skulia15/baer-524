@@ -34,7 +34,7 @@ export interface WeekAllocation {
   year_id: string
   week_number: number
   week_start: string // ISO date string (Thursday)
-  week_end: string   // ISO date string (Wednesday)
+  week_end: string // ISO date string (Wednesday)
   type: WeekAllocationType
   household_id: string | null
 }
@@ -47,7 +47,12 @@ export interface DayRelease {
   claimed_by_household_id: string | null
 }
 
-export type RequestStatus = 'pending_own_head' | 'pending_releasing_head' | 'approved' | 'declined' | 'cancelled'
+export type RequestStatus =
+  | 'pending_own_head'
+  | 'pending_releasing_head'
+  | 'approved'
+  | 'declined'
+  | 'cancelled'
 
 export interface Request {
   id: string
@@ -62,7 +67,12 @@ export interface Request {
   resolved_at: string | null
 }
 
-export type SwapStatus = 'pending_own_head' | 'pending_other_head' | 'approved' | 'declined' | 'cancelled'
+export type SwapStatus =
+  | 'pending_own_head'
+  | 'pending_other_head'
+  | 'approved'
+  | 'declined'
+  | 'cancelled'
 
 export interface SwapProposal {
   id: string
@@ -108,6 +118,14 @@ export interface Notification {
   reference_type: string | null
   message: string
   read: boolean
+  created_at: string
+}
+
+export interface DayPlan {
+  id: string
+  week_allocation_id: string
+  date: string
+  household_id: string
   created_at: string
 }
 

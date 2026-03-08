@@ -1,7 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { signInviteToken } from '@/lib/invite'
+import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 
 export async function generateInviteLink(
@@ -20,7 +20,7 @@ export async function generateInviteLink(
     .eq('id', user.id)
     .single()
   if (!profile || profile.role !== 'head')
-    return { error: 'Aðeins yfirmenn geta búið til boðshlekkur' }
+    return { error: 'Aðeins eigendur geta búið til boðshlekkur' }
   if (profile.household_id !== householdId)
     return { error: 'Þú getur aðeins boðið í þína fjölskyldu' }
 
