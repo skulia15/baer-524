@@ -100,7 +100,7 @@ function mockSupabaseWith(tableData: Record<string, unknown>) {
       return chain
     }),
   }
-  vi.mocked(createClient).mockResolvedValue(supabase as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
+  vi.mocked(createClient).mockResolvedValue(supabase as unknown as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
   return supabase
 }
 
@@ -114,7 +114,7 @@ describe('approveRequest', () => {
       },
       from: vi.fn(),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
 
     const result = await approveRequest('req-1')
     expect(result.error).toBe('Ekki innskráður')
@@ -136,7 +136,7 @@ describe('approveRequest', () => {
         return chain
       }),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
 
     const result = await approveRequest('req-1')
     expect(result.error).toBe('Aðeins yfirmenn geta samþykkt')
@@ -162,7 +162,7 @@ describe('approveRequest', () => {
         return chain
       }),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
 
     const result = await approveRequest('req-1')
     expect(result.error).toBe('Beiðni er ekki í bíðstöðu')
@@ -186,7 +186,7 @@ describe('declineRequest', () => {
         return chain
       }),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
 
     const result = await declineRequest('req-1', 'test reason')
     expect(result.error).toBe('Aðeins yfirmenn geta hafnað')
@@ -201,7 +201,7 @@ describe('cancelRequest', () => {
       },
       from: vi.fn(),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
 
     const result = await cancelRequest('req-1')
     expect(result.error).toBe('Ekki innskráður')
@@ -216,7 +216,7 @@ describe('createRequest', () => {
       },
       from: vi.fn(),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
 
     const result = await createRequest('alloc-1', ['2026-06-04'])
     expect(result.error).toBe('Ekki innskráður')
@@ -235,7 +235,7 @@ describe('createRequest', () => {
         return chain
       }),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as ReturnType<typeof createClient> extends Promise<infer T> ? T : never)
 
     const result = await createRequest('alloc-1', ['2026-06-04'])
     expect(result.error).toBe('Prófíll ekki fundinn')

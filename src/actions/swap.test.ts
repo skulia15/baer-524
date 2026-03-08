@@ -13,7 +13,7 @@ function mockUnauthenticated() {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
     from: vi.fn(),
   }
-  vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+  vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
   return supabase
 }
 
@@ -37,7 +37,7 @@ function mockAsRole(role: 'head' | 'member', householdId = 'hh-1') {
       return chain
     }),
   }
-  vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+  vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
   return supabase
 }
 
@@ -61,7 +61,7 @@ describe('createSwap', () => {
         return chain
       }),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
     const result = await createSwap('alloc-a', ['2026-01-01'], 'alloc-b', ['2026-01-08'])
     expect(result.error).toBe('Prófíll ekki fundinn')
   })

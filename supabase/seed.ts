@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -73,7 +74,18 @@ async function seed() {
       throw profileErr
     }
 
-    console.log(`Head ${HOUSEHOLDS[i].name} (${email}):`, authUser.user.id)
+    // Generate a one-time recovery link so the head can set their password on first login
+    const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: `${appUrl}/auth/callback` },
+    })
+    if (linkErr) {
+      console.warn(`  Warning: could not generate link for ${email}:`, linkErr.message)
+    } else {
+      console.log(`  First-login link (send to ${HOUSEHOLDS[i].name}):`)
+      console.log(`  ${linkData.properties.action_link}`)
+    }
   }
 
   // Create year record for current year

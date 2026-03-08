@@ -24,7 +24,7 @@ describe('login', () => {
         }),
       },
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     const result = await login('test@example.com', 'wrongpassword')
     expect(result).toEqual({ error: 'Invalid login credentials' })
@@ -36,7 +36,7 @@ describe('login', () => {
         signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
       },
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     // redirect() throws in Next.js so we catch the error
     try {
@@ -56,7 +56,7 @@ describe('setPassword', () => {
         updateUser: vi.fn(),
       },
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     const result = await setPassword('newpass123')
     expect(result).toEqual({ error: 'Notandi ekki innskráður' })
@@ -74,7 +74,7 @@ describe('setPassword', () => {
         }),
       },
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     const result = await setPassword('short')
     expect(result).toEqual({ error: 'Password too short' })
@@ -102,7 +102,7 @@ describe('signupViaInvite', () => {
       },
       from: vi.fn(),
     }
-    vi.mocked(createServiceClient).mockReturnValue(serviceClient as ReturnType<typeof createServiceClient>)
+    vi.mocked(createServiceClient).mockReturnValue(serviceClient as unknown as ReturnType<typeof createServiceClient>)
 
     const result = await signupViaInvite('valid-token', 'Name', 'test@example.com', 'password')
     expect(result).toEqual({ error: 'Email already in use' })
@@ -131,7 +131,7 @@ describe('signupViaInvite', () => {
       },
       from: vi.fn().mockReturnValue(fromChain),
     }
-    vi.mocked(createServiceClient).mockReturnValue(serviceClient as ReturnType<typeof createServiceClient>)
+    vi.mocked(createServiceClient).mockReturnValue(serviceClient as unknown as ReturnType<typeof createServiceClient>)
 
     const result = await signupViaInvite('valid-token', 'Name', 'test@example.com', 'password')
     expect(deleteUser).toHaveBeenCalledWith('new-user-id')
@@ -146,7 +146,7 @@ describe('logout', () => {
         signOut: vi.fn().mockResolvedValue({ error: null }),
       },
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     try {
       await logout()

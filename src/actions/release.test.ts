@@ -25,7 +25,7 @@ describe('releaseDays', () => {
       },
       from: vi.fn(),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     const result = await releaseDays('alloc-1', ['2026-01-01'])
     expect(result.error).toBe('Ekki innskráður')
@@ -38,7 +38,7 @@ describe('releaseDays', () => {
       },
       from: vi.fn().mockImplementation(() => makeChain(null)),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     const result = await releaseDays('alloc-1', ['2026-01-01'])
     expect(result.error).toBe('Prófíll ekki fundinn')
@@ -56,7 +56,7 @@ describe('releaseDays', () => {
         return makeChain({ id: 'alloc-1', household_id: 'hh-2', week_number: 5, year_id: 'yr-1', year: { house_id: 'house-1' } })
       }),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     const result = await releaseDays('alloc-1', ['2026-01-01'])
     expect(result.error).toBe('Þetta er ekki þín vika')
@@ -71,7 +71,7 @@ describe('retractRelease', () => {
       },
       from: vi.fn(),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     const result = await retractRelease(['dr-1', 'dr-2'])
     expect(result.error).toBe('Ekki innskráður')
@@ -85,7 +85,7 @@ describe('retractRelease', () => {
       },
       from: vi.fn().mockReturnValue(chain),
     }
-    vi.mocked(createClient).mockResolvedValue(supabase as MockSupabase)
+    vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
     const result = await retractRelease(['dr-1'])
     expect(result.error).toBeUndefined()
