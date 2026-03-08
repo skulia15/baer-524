@@ -12,11 +12,11 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 })
 
 const HOUSEHOLDS = [
-  { name: 'Arnar', color: '#3d7a52' },   // moss green
-  { name: 'Maggi', color: '#3a6494' },   // fjord blue
-  { name: 'Keddi', color: '#b06030' },   // amber / birch bark
-  { name: 'Óli', color: '#7050a0' },     // heather purple
-  { name: 'Sigurjón', color: '#a03838' }, // volcanic red
+  { name: 'Arnar', color: '#00966e' },   // jade
+  { name: 'Maggi', color: '#2060c8' },   // cobalt blue
+  { name: 'Keddi', color: '#e8900a' },   // saffron
+  { name: 'Óli', color: '#7030c0' },     // violet
+  { name: 'Sigurjón', color: '#d82828' }, // scarlet
 ]
 
 // Replace these with real emails before running
