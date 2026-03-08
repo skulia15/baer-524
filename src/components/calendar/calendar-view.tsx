@@ -60,12 +60,11 @@ export function CalendarView({
       <HouseholdLegend households={households} />
 
       <div className="px-3 pb-20 pt-2">
-        {allocations.map((allocation) => {
+        {allocations.filter((a) => a.week_end >= todayStr).map((allocation) => {
           const household = allocation.household_id
             ? (householdMap.get(allocation.household_id) ?? null)
             : null
           const weekReleases = releases.filter((r) => r.week_allocation_id === allocation.id)
-          const isPast = allocation.week_end < todayStr
           const isCurrent = currentWeek?.id === allocation.id
           const isOwn = allocation.household_id === currentHouseholdId
 
@@ -76,7 +75,7 @@ export function CalendarView({
               household={household}
               releases={weekReleases}
               isOwn={isOwn}
-              isPast={isPast}
+              isPast={false}
               isCurrentWeek={isCurrent}
             />
           )
