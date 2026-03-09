@@ -2,7 +2,7 @@ import { getHouseholdStyle } from '@/lib/colors'
 import { formatDay, formatWeekRange } from '@/lib/dates'
 import type { DayPlan, DayRelease, Household, Profile, WeekAllocation } from '@/types/db'
 import { addDays } from 'date-fns'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, CalendarCheck, CalendarPlus, CalendarX, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
 interface WeekDetailViewProps {
@@ -124,20 +124,23 @@ export function WeekDetailView({
             <>
               <Link
                 href={`/dagatal/vika/${allocation.week_number}/stadfesta`}
-                className="rounded-xl bg-green-700 px-4 py-3 text-center text-sm font-medium text-white transition-colors hover:bg-green-800"
+                className="flex items-center justify-center gap-2 rounded-xl bg-green-700 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-green-800"
               >
+                <CalendarCheck className="h-4 w-4" />
                 Staðfesta nýtingu
               </Link>
               <Link
                 href={`/dagatal/vika/${allocation.week_number}/losa`}
-                className="rounded-xl border border-stone-200 px-4 py-3 text-center text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+                className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
               >
+                <CalendarX className="h-4 w-4" />
                 Merkja sem ónýttir
               </Link>
               <Link
                 href={`/dagatal/vika/${allocation.week_number}/skipti`}
-                className="rounded-xl border border-stone-200 px-4 py-3 text-center text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+                className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
               >
+                <ArrowLeftRight className="h-4 w-4" />
                 Leggja til skipti
               </Link>
             </>
@@ -146,14 +149,16 @@ export function WeekDetailView({
             <>
               <Link
                 href={`/dagatal/vika/${allocation.week_number}/bidni`}
-                className="rounded-xl bg-green-700 px-4 py-3 text-center text-sm font-medium text-white transition-colors hover:bg-green-800"
+                className="flex items-center justify-center gap-2 rounded-xl bg-green-700 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-green-800"
               >
+                <CalendarPlus className="h-4 w-4" />
                 Óska eftir dögum
               </Link>
               <Link
                 href={`/dagatal/vika/${allocation.week_number}/skipti`}
-                className="rounded-xl border border-stone-200 px-4 py-3 text-center text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+                className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
               >
+                <ArrowLeftRight className="h-4 w-4" />
                 Leggja til skipti
               </Link>
             </>
