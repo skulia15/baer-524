@@ -30,18 +30,22 @@ export function WeekRow({
   isPast,
   isCurrentWeek,
 }: WeekRowProps) {
-  const releasedCount = releases.filter((r) => r.status === 'released').length
-  const isFullyReleased = releasedCount === 7
-  const isPartiallyReleased = releasedCount > 0 && releasedCount < 7
+  const availableCount = releases.filter((r) => r.status === 'released').length
+  const claimedCount = releases.filter((r) => r.status === 'claimed').length
+  const isFullyReleased = availableCount === 7
+  const isPartiallyReleased = availableCount > 0 && availableCount < 7
+  const hasAvailable = availableCount > 0
   const isShared = allocation.type !== 'household'
 
   const barStyle = isShared
     ? { backgroundColor: '#9ca3af', color: '#ffffff' }
     : isOwn && isFullyReleased && household
       ? getHouseholdFadedStyle(household.color)
-      : household
-        ? getHouseholdStyle(household.color)
-        : { backgroundColor: '#9ca3af', color: '#ffffff' }
+      : !isOwn && hasAvailable && household
+        ? getHouseholdFadedStyle(household.color)
+        : household
+          ? getHouseholdStyle(household.color)
+          : { backgroundColor: '#9ca3af', color: '#ffffff' }
 
   const label = isShared
     ? allocation.type === 'shared_verslunarmannahelgi'
@@ -73,9 +77,19 @@ export function WeekRow({
               </div>
               <div className="text-xs opacity-80">{label}</div>
             </div>
-            {(isFullyReleased || isPartiallyReleased) && !isShared && (
+            {(isFullyReleased || isPartiallyReleased) && !isShared && isOwn && (
               <span className="ml-2 rounded-md bg-white/25 px-1.5 py-0.5 text-[10px] font-semibold">
-                Losað
+                {isFullyReleased ? 'Laust' : `${availableCount}d laust`}
+              </span>
+            )}
+            {hasAvailable && !isShared && !isOwn && (
+              <span className="ml-2 rounded-md bg-white/30 px-1.5 py-0.5 text-[10px] font-semibold">
+                {availableCount === 7 ? 'Laust' : `${availableCount}d laust`}
+              </span>
+            )}
+            {claimedCount > 0 && !isShared && !isOwn && !hasAvailable && (
+              <span className="ml-2 rounded-md bg-white/25 px-1.5 py-0.5 text-[10px] font-semibold">
+                Tekið
               </span>
             )}
           </div>

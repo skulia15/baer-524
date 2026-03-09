@@ -2,7 +2,15 @@ import { getHouseholdStyle } from '@/lib/colors'
 import { formatDay, formatWeekRange } from '@/lib/dates'
 import type { DayPlan, DayRelease, Household, Profile, WeekAllocation } from '@/types/db'
 import { addDays } from 'date-fns'
-import { ArrowLeft, ArrowLeftRight, CalendarCheck, CalendarPlus, CalendarX, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  CalendarCheck,
+  CalendarPlus,
+  CalendarX,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
 import Link from 'next/link'
 
 interface WeekDetailViewProps {
@@ -77,9 +85,7 @@ export function WeekDetailView({
           Vika {allocation.week_number}
           {!isShared && household && ` — ${household.name}`}
           {isShared &&
-            (allocation.type === 'shared_verslunarmannahelgi'
-              ? ' — Versló vika'
-              : ' — Vinnuvika')}
+            (allocation.type === 'shared_verslunarmannahelgi' ? ' — Versló vika' : ' — Vinnuvika')}
         </div>
         <div className="text-sm opacity-90">
           {formatWeekRange(allocation.week_start, allocation.week_end)}
@@ -134,7 +140,7 @@ export function WeekDetailView({
                 className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
               >
                 <CalendarX className="h-4 w-4" />
-                Merkja sem ónýtta
+                Gera daga lausa / Í boði
               </Link>
               <Link
                 href={`/dagatal/vika/${allocation.week_number}/skipti`}

@@ -66,7 +66,9 @@ export default function LosaPage() {
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h1 className="font-semibold text-stone-900">Merkja sem ónýtta — Vika {weekNumber}</h1>
+        <h1 className="font-semibold text-stone-900">
+          Gera daga lausa / Í boði — Vika {weekNumber}
+        </h1>
       </div>
       <p className="mb-4 text-sm text-stone-500">Veldu daga til að losa:</p>
       <DayPicker days={days} value={selected} onChange={setSelected} />
