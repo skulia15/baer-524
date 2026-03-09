@@ -87,7 +87,7 @@ export default async function StillingarPage() {
       <div className="px-4 py-4">
         <p className="text-xs text-stone-400">
           {profile.name} · {household?.name} ·{' '}
-          <span className="font-medium">{isHead ? 'Eigandi' : 'Meðlimur'}</span>
+          <span className="font-medium">{isHead ? 'Eigandi' : 'Fjölskyldumeðlimur'}</span>
         </p>
       </div>
     </div>
