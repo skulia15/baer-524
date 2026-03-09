@@ -1,6 +1,13 @@
 'use server'
 
+import { sendEmail } from '@/lib/email'
 import { createClient } from '@/lib/supabase/server'
+
+const APP_URL = 'https://baer524.vercel.app/dagatal'
+
+function emailHtml(message: string) {
+  return `<p>Bær 524: ${message}</p><p><a href="${APP_URL}">Opna app</a></p>`
+}
 
 export async function createSwap(
   allocationAId: string,
@@ -60,38 +67,42 @@ export async function createSwap(
   if (isHead) {
     const { data: otherHead } = await supabase
       .from('profile')
-      .select('id')
+      .select('id, email')
       .eq('household_id', allocationB.household_id)
       .eq('role', 'head')
       .single()
 
     if (otherHead) {
+      const message = `Skiptatillaga fyrir viku ${allocationA.week_number} / ${allocationB.week_number}`
       await supabase.from('notification').insert({
         user_id: otherHead.id,
         type: 'swap_received' as const,
         reference_id: swap.id,
         reference_type: 'swap_proposal',
-        message: `Skiptatillaga fyrir viku ${allocationA.week_number} / ${allocationB.week_number}`,
+        message,
         read: false,
       })
+      void sendEmail(otherHead.email, 'Skiptatillaga móttekin', emailHtml(message))
     }
   } else {
     const { data: ownHead } = await supabase
       .from('profile')
-      .select('id')
+      .select('id, email')
       .eq('household_id', profile.household_id)
       .eq('role', 'head')
       .single()
 
     if (ownHead) {
+      const message = 'Meðlimur sendi skiptatillögu – bíður samþykkis'
       await supabase.from('notification').insert({
         user_id: ownHead.id,
         type: 'member_action_pending' as const,
         reference_id: swap.id,
         reference_type: 'swap_proposal',
-        message: 'Meðlimur sendi skiptatillögu – bíður samþykkis',
+        message,
         read: false,
       })
+      void sendEmail(ownHead.email, 'Meðlimur bíður samþykkis', emailHtml(message))
     }
   }
 
@@ -125,20 +136,22 @@ export async function approveSwap(swapId: string) {
 
     const { data: otherHead } = await supabase
       .from('profile')
-      .select('id')
+      .select('id, email')
       .eq('household_id', swap.household_b_id)
       .eq('role', 'head')
       .single()
 
     if (otherHead) {
+      const message = 'Skiptatillaga bíður samþykkis þíns'
       await supabase.from('notification').insert({
         user_id: otherHead.id,
         type: 'swap_received' as const,
         reference_id: swapId,
         reference_type: 'swap_proposal',
-        message: 'Skiptatillaga bíður samþykkis þíns',
+        message,
         read: false,
       })
+      void sendEmail(otherHead.email, 'Skiptatillaga bíður samþykkis þíns', emailHtml(message))
     }
 
     return { success: true }
@@ -177,14 +190,22 @@ export async function approveSwap(swapId: string) {
       .update({ status: 'approved', resolved_at: new Date().toISOString() })
       .eq('id', swapId)
 
+    const message = 'Skiptatillaga þín var samþykkt'
     await supabase.from('notification').insert({
       user_id: swap.created_by,
       type: 'swap_resolved' as const,
       reference_id: swapId,
       reference_type: 'swap_proposal',
-      message: 'Skiptatillaga þín var samþykkt',
+      message,
       read: false,
     })
+
+    const { data: creator } = await supabase
+      .from('profile')
+      .select('email')
+      .eq('id', swap.created_by)
+      .single()
+    if (creator) void sendEmail(creator.email, 'Skiptatillaga þín samþykkt', emailHtml(message))
 
     return { success: true }
   }
@@ -231,14 +252,22 @@ export async function declineSwap(swapId: string, reason?: string) {
     .eq('id', swapId)
     .in('status', ['pending_own_head', 'pending_other_head'])
 
+  const declineMessage = reason ? `Skiptatillögu hafnað: ${reason}` : 'Skiptatillögu hafnað'
   await supabase.from('notification').insert({
     user_id: swap.created_by,
     type: 'swap_resolved' as const,
     reference_id: swapId,
     reference_type: 'swap_proposal',
-    message: reason ? `Skiptatillögu hafnað: ${reason}` : 'Skiptatillögu hafnað',
+    message: declineMessage,
     read: false,
   })
+
+  const { data: creator } = await supabase
+    .from('profile')
+    .select('email')
+    .eq('id', swap.created_by)
+    .single()
+  if (creator) void sendEmail(creator.email, 'Skiptatillögu hafnað', emailHtml(declineMessage))
 
   return { success: true }
 }

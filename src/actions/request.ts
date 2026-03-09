@@ -1,6 +1,13 @@
 'use server'
 
+import { sendEmail } from '@/lib/email'
 import { createClient } from '@/lib/supabase/server'
+
+const APP_URL = 'https://baer524.vercel.app/dagatal'
+
+function emailHtml(message: string) {
+  return `<p>Bær 524: ${message}</p><p><a href="${APP_URL}">Opna app</a></p>`
+}
 
 export async function createRequest(targetAllocationId: string, requestedDays: string[]) {
   const supabase = await createClient()
@@ -44,38 +51,42 @@ export async function createRequest(targetAllocationId: string, requestedDays: s
   if (isHead) {
     const { data: releasingHead } = await supabase
       .from('profile')
-      .select('id')
+      .select('id, email')
       .eq('household_id', allocation.household_id)
       .eq('role', 'head')
       .single()
 
     if (releasingHead) {
+      const message = `Beiðni um daga í viku ${allocation.week_number}`
       await supabase.from('notification').insert({
         user_id: releasingHead.id,
         type: 'request_received' as const,
         reference_id: request.id,
         reference_type: 'request',
-        message: `Beiðni um daga í viku ${allocation.week_number}`,
+        message,
         read: false,
       })
+      void sendEmail(releasingHead.email, 'Beiðni um daga', emailHtml(message))
     }
   } else {
     const { data: ownHead } = await supabase
       .from('profile')
-      .select('id')
+      .select('id, email')
       .eq('household_id', profile.household_id)
       .eq('role', 'head')
       .single()
 
     if (ownHead) {
+      const message = 'Meðlimur sendi beiðni – bíður samþykkis'
       await supabase.from('notification').insert({
         user_id: ownHead.id,
         type: 'member_action_pending' as const,
         reference_id: request.id,
         reference_type: 'request',
-        message: 'Meðlimur sendi beiðni – bíður samþykkis',
+        message,
         read: false,
       })
+      void sendEmail(ownHead.email, 'Meðlimur bíður samþykkis', emailHtml(message))
     }
   }
 
@@ -119,20 +130,22 @@ export async function approveRequest(requestId: string) {
 
     const { data: releasingHead } = await supabase
       .from('profile')
-      .select('id')
+      .select('id, email')
       .eq('household_id', allocation.household_id)
       .eq('role', 'head')
       .single()
 
     if (releasingHead) {
+      const message = `Beiðni um daga í viku ${allocation.week_number}`
       await supabase.from('notification').insert({
         user_id: releasingHead.id,
         type: 'request_received' as const,
         reference_id: requestId,
         reference_type: 'request',
-        message: `Beiðni um daga í viku ${allocation.week_number}`,
+        message,
         read: false,
       })
+      void sendEmail(releasingHead.email, 'Beiðni um daga', emailHtml(message))
     }
 
     return { success: true }
@@ -200,14 +213,23 @@ export async function approveRequest(requestId: string) {
       }
     }
 
+    const approveMessage = 'Beiðni þín var samþykkt'
     await supabase.from('notification').insert({
       user_id: request.created_by,
       type: 'request_resolved' as const,
       reference_id: requestId,
       reference_type: 'request',
-      message: 'Beiðni þín var samþykkt',
+      message: approveMessage,
       read: false,
     })
+
+    const { data: creator } = await supabase
+      .from('profile')
+      .select('email')
+      .eq('id', request.created_by)
+      .single()
+    if (creator)
+      void sendEmail(creator.email, 'Beiðni þín samþykkt', emailHtml(approveMessage))
 
     return { success: true }
   }
@@ -257,14 +279,22 @@ export async function declineRequest(requestId: string, reason?: string) {
     .eq('id', requestId)
     .in('status', ['pending_own_head', 'pending_releasing_head'])
 
+  const declineMessage = reason ? `Beiðni hafnað: ${reason}` : 'Beiðni hafnað'
   await supabase.from('notification').insert({
     user_id: request.created_by,
     type: 'request_resolved' as const,
     reference_id: requestId,
     reference_type: 'request',
-    message: reason ? `Beiðni hafnað: ${reason}` : 'Beiðni hafnað',
+    message: declineMessage,
     read: false,
   })
+
+  const { data: creator } = await supabase
+    .from('profile')
+    .select('email')
+    .eq('id', request.created_by)
+    .single()
+  if (creator) void sendEmail(creator.email, 'Beiðni þín hafnað', emailHtml(declineMessage))
 
   return { success: true }
 }
