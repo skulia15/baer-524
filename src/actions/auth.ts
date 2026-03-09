@@ -71,6 +71,20 @@ export async function signupViaInvite(
   redirect('/login')
 }
 
+export async function changePassword(newPassword: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser()
+  if (userErr || !user) return { error: 'Notandi ekki innskráður' }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) return { error: error.message }
+
+  return { success: true }
+}
+
 export async function logout() {
   const supabase = await createClient()
   // Cookie is cleared locally regardless of server-side error
