@@ -71,6 +71,26 @@ export async function signupViaInvite(
   redirect('/login')
 }
 
+export async function updatePhone(phone: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser()
+  if (userErr || !user) return { error: 'Notandi ekki innskráður' }
+
+  const digits = phone.replace(/\D/g, '')
+  if (digits && digits.length !== 7) return { error: 'Símanúmer verður að vera 7 tölustafir' }
+
+  const { error } = await supabase
+    .from('profile')
+    .update({ phone: digits || null })
+    .eq('id', user.id)
+  if (error) return { error: error.message }
+
+  return { success: true }
+}
+
 export async function changePassword(newPassword: string) {
   const supabase = await createClient()
   const {

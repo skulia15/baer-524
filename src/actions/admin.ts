@@ -124,6 +124,23 @@ export async function adminUpdateHousehold(userId: string, householdId: string):
   return { success: true }
 }
 
+export async function adminUpdatePhone(userId: string, phone: string): Promise<Result> {
+  const check = await verifyAdmin()
+  if ('error' in check) return check
+
+  const digits = phone.replace(/\D/g, '')
+  if (digits && digits.length !== 7) return { error: 'Símanúmer verður að vera 7 tölustafir' }
+
+  const service = createServiceClient()
+  const { error } = await service
+    .from('profile')
+    .update({ phone: digits || null })
+    .eq('id', userId)
+  if (error) return { error: error.message }
+
+  return { success: true }
+}
+
 export async function adminUpdateRole(userId: string, role: 'head' | 'member'): Promise<Result> {
   const check = await verifyAdmin()
   if ('error' in check) return check

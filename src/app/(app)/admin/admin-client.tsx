@@ -6,6 +6,7 @@ import {
   adminUpdateEmail,
   adminUpdateHousehold,
   adminUpdatePassword,
+  adminUpdatePhone,
   adminUpdateRole,
 } from '@/actions/admin'
 import type { Household } from '@/types/db'
@@ -182,8 +183,8 @@ function UserEditPanel({
   onSuccess,
 }: { user: ProfileWithHousehold; households: Household[]; onSuccess: () => void }) {
   return (
-    <div className="border-t border-stone-100 bg-stone-50 px-4 py-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="border-t border-stone-100 bg-stone-50 px-4 py-5">
+      <div className="grid gap-4">
         <EditField
           label="Breyta netfangi"
           initialValue={user.email}
@@ -195,6 +196,13 @@ function UserEditPanel({
           initialValue=""
           placeholder="Nýtt lykilorð"
           onSave={async (v) => adminUpdatePassword(user.id, v)}
+          onSuccess={onSuccess}
+        />
+        <EditField
+          label="Breyta símanúmeri"
+          initialValue={user.phone ?? ''}
+          placeholder="0000000"
+          onSave={async (v) => adminUpdatePhone(user.id, v)}
           onSuccess={onSuccess}
         />
         <SelectField

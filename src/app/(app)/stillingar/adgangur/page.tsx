@@ -4,6 +4,7 @@ import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import ChangePasswordForm from './change-password-form'
+import PhoneForm from './phone-form'
 
 export default async function AdgangurPage() {
   const supabase = await createClient()
@@ -52,6 +53,9 @@ export default async function AdgangurPage() {
             {profile.role === 'head' ? 'Eigandi' : 'Meðlimur'}
           </span>
         </p>
+        <div className="text-sm">
+          <PhoneForm currentPhone={profile.phone} />
+        </div>
       </div>
       <div className="mb-6 rounded-xl border border-stone-200 p-4">
         <h2 className="mb-3 text-sm font-medium text-stone-700">Breyta lykilorði</h2>

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { CalendarDays, ChevronRight, KeyRound, UserPlus } from 'lucide-react'
+import { CalendarDays, ChevronRight, KeyRound, Phone, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -50,6 +50,16 @@ export default async function StillingarPage() {
             </Link>
           </>
         )}
+        <Link
+          href="/stillingar/tengilidir"
+          className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50"
+        >
+          <span className="flex items-center gap-3 text-sm text-stone-800">
+            <Phone className="h-4 w-4 text-stone-400" />
+            Tengiliðir
+          </span>
+          <ChevronRight className="h-4 w-4 text-stone-400" />
+        </Link>
         <Link
           href="/stillingar/adgangur"
           className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50"

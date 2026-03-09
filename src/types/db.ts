@@ -15,6 +15,7 @@ export interface Profile {
   id: string
   email: string
   name: string
+  phone: string | null
   household_id: string
   role: 'head' | 'member'
 }
