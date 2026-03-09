@@ -39,13 +39,17 @@ export default async function BidniDetailPage({
 
   const allocation = request.allocation as {
     week_number: number
+    household_id: string
     household: { name: string } | null
   }
   const requestingHousehold = request.requesting_household as { name: string }
 
   const canApprove =
     profile?.role === 'head' &&
-    (request.status === 'pending_own_head' || request.status === 'pending_releasing_head')
+    ((request.status === 'pending_own_head' &&
+      profile.household_id === request.requesting_household_id) ||
+      (request.status === 'pending_releasing_head' &&
+        profile.household_id === allocation.household_id))
 
   const canCancel =
     profile?.household_id === request.requesting_household_id &&

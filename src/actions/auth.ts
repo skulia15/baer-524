@@ -73,6 +73,7 @@ export async function signupViaInvite(
 
 export async function logout() {
   const supabase = await createClient()
+  // Cookie is cleared locally regardless of server-side error
   await supabase.auth.signOut()
   redirect('/login')
 }
