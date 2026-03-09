@@ -5,6 +5,7 @@ import { addDays } from 'date-fns'
 import {
   ArrowLeft,
   ArrowLeftRight,
+  ArrowRight,
   CalendarCheck,
   CalendarPlus,
   CalendarX,
@@ -12,6 +13,12 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import Link from 'next/link'
+
+type DayTransfer = {
+  from: { name: string; color: string }
+  to: { name: string; color: string }
+  type: 'swap' | 'request'
+}
 
 interface WeekDetailViewProps {
   allocation: WeekAllocation
@@ -21,6 +28,7 @@ interface WeekDetailViewProps {
   profile: Profile
   prevWeek: number | null
   nextWeek: number | null
+  dayTransfers: Record<string, DayTransfer>
 }
 
 export function WeekDetailView({
@@ -31,6 +39,7 @@ export function WeekDetailView({
   profile,
   prevWeek,
   nextWeek,
+  dayTransfers,
 }: WeekDetailViewProps) {
   const today = new Date().toISOString().split('T')[0]
   const isPast = allocation.week_end < today
@@ -115,10 +124,32 @@ export function WeekDetailView({
             statusColor = 'text-stone-400'
           }
 
+          const transfer = dayTransfers[dateStr]
+
           return (
-            <div key={dateStr} className="flex items-center justify-between py-2.5">
-              <span className="text-sm text-stone-800">{formatDay(day)}</span>
-              <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+            <div key={dateStr} className="py-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-stone-800">{formatDay(day)}</span>
+                <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+              </div>
+              {transfer && (
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-stone-500">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: transfer.from.color }}
+                  />
+                  <span>{transfer.from.name}</span>
+                  <ArrowRight className="h-3 w-3 shrink-0" />
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: transfer.to.color }}
+                  />
+                  <span>{transfer.to.name}</span>
+                  <span className="text-stone-400">
+                    ({transfer.type === 'swap' ? 'skipti' : 'beiðni'})
+                  </span>
+                </div>
+              )}
             </div>
           )
         })}

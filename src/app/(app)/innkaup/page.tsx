@@ -15,7 +15,10 @@ export default async function InnkaupPage() {
     .select('household_id, household:household_id(house_id)')
     .eq('id', user.id)
     .single()
-  if (!profile) redirect('/login')
+  if (!profile) {
+    await supabase.auth.signOut()
+    redirect('/login')
+  }
 
   const household = profile.household as unknown as { house_id: string } | null
   if (!household) redirect('/login')

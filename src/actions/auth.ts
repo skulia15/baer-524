@@ -9,7 +9,7 @@ export async function login(email: string, password: string) {
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) return { error: error.message }
-  redirect('/dagatal')
+  return { success: true }
 }
 
 export async function setPassword(newPassword: string) {

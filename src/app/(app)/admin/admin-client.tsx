@@ -3,6 +3,7 @@
 import type { ProfileWithHousehold } from '@/actions/admin'
 import {
   adminCreateUser,
+  adminSendTestEmail,
   adminUpdateEmail,
   adminUpdateHousehold,
   adminUpdatePassword,
@@ -22,18 +23,45 @@ export function AdminClient({ profiles, households }: Props) {
   const router = useRouter()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [emailStatus, setEmailStatus] = useState('')
+  const [emailPending, startEmailTransition] = useTransition()
+
+  function handleTestEmail() {
+    setEmailStatus('')
+    startEmailTransition(async () => {
+      const res = await adminSendTestEmail()
+      setEmailStatus('error' in res ? res.error : 'Sent!')
+    })
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-xl font-semibold text-stone-900">Admin</h1>
-        <button
-          type="button"
-          onClick={() => setShowCreate((v) => !v)}
-          className="rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-medium text-white"
-        >
-          {showCreate ? 'Loka' : 'Nýr notandi'}
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleTestEmail}
+              disabled={emailPending}
+              className="rounded-lg border border-stone-200 px-3 py-1.5 text-sm font-medium text-stone-600 disabled:opacity-50"
+            >
+              {emailPending ? 'Sendir…' : 'Prófa tölvupóst'}
+            </button>
+            {emailStatus && (
+              <span className={`text-xs ${emailStatus === 'Sent!' ? 'text-green-600' : 'text-red-600'}`}>
+                {emailStatus}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCreate((v) => !v)}
+            className="rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-medium text-white"
+          >
+            {showCreate ? 'Loka' : 'Nýr notandi'}
+          </button>
+        </div>
       </div>
 
       {showCreate && (

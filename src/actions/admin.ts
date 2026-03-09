@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { sendEmail } from '@/lib/email'
 import type { Household, Profile } from '@/types/db'
 
 type Result = { success: true } | { error: string }
@@ -137,6 +138,28 @@ export async function adminUpdatePhone(userId: string, phone: string): Promise<R
     .update({ phone: digits || null })
     .eq('id', userId)
   if (error) return { error: error.message }
+
+  return { success: true }
+}
+
+export async function adminSendTestEmail(): Promise<Result> {
+  const check = await verifyAdmin()
+  if ('error' in check) return check
+
+  const supabase = await createClient()
+  const { data: profile } = await supabase
+    .from('profile')
+    .select('email, name')
+    .eq('id', check.userId)
+    .single()
+
+  if (!profile) return { error: 'Notandi ekki fundinn' }
+
+  await sendEmail(
+    profile.email,
+    'Resend prófun — Bær 524',
+    `<p>Hæ ${profile.name},</p><p>Þetta er prófunarpóstur frá Bær 524. Resend virkar rétt!</p>`,
+  )
 
   return { success: true }
 }

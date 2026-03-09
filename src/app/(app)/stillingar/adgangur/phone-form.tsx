@@ -10,13 +10,12 @@ interface PhoneFormProps {
 export default function PhoneForm({ currentPhone }: PhoneFormProps) {
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [displayPhone, setDisplayPhone] = useState(currentPhone)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
-    setSuccess(false)
     const fd = new FormData(e.currentTarget)
     const phone = (fd.get('phone') as string).replace(/\D/g, '')
     if (phone && phone.length !== 7) {
@@ -29,7 +28,7 @@ export default function PhoneForm({ currentPhone }: PhoneFormProps) {
     if (result?.error) {
       setError(result.error)
     } else {
-      setSuccess(true)
+      setDisplayPhone(phone || null)
       setEditing(false)
     }
   }
@@ -39,7 +38,7 @@ export default function PhoneForm({ currentPhone }: PhoneFormProps) {
       <div className="flex items-center justify-between">
         <div>
           <span className="text-stone-400">Símanúmer:</span>{' '}
-          <span className="text-stone-800">{success || currentPhone ? (success ? '—uppfært' : currentPhone) : '—'}</span>
+          <span className="text-stone-800">{displayPhone ?? '—'}</span>
         </div>
         <button
           type="button"
@@ -58,7 +57,7 @@ export default function PhoneForm({ currentPhone }: PhoneFormProps) {
       <input
         name="phone"
         type="tel"
-        defaultValue={currentPhone ?? ''}
+        defaultValue={displayPhone ?? ''}
         maxLength={7}
         className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 focus:border-green-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-600/20"
       />

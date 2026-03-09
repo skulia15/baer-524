@@ -19,7 +19,10 @@ export default async function AdgangurPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile) redirect('/login')
+  if (!profile) {
+    await supabase.auth.signOut()
+    redirect('/login')
+  }
 
   const household = profile.household as { name: string } | null
 

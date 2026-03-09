@@ -23,7 +23,10 @@ export default async function DagatalPage({
     .eq('id', user.id)
     .single()
 
-  if (!profile) redirect('/login')
+  if (!profile) {
+    await supabase.auth.signOut()
+    redirect('/login')
+  }
 
   const { data: yearRecord } = await supabase
     .from('year')
@@ -50,13 +53,26 @@ export default async function DagatalPage({
     .select('*')
     .eq('house_id', (profile.household as { house_id: string }).house_id)
 
+  const { data: approvedSwaps } = await supabase
+    .from('swap_proposal')
+    .select('allocation_a_id, allocation_b_id, household_a_id, household_b_id')
+    .eq('year_id', yearRecord?.id ?? '')
+    .eq('status', 'approved')
+
   let pendingCount = 0
   if (profile.role === 'head') {
-    const { count: reqCount } = await supabase
-      .from('request')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending_releasing_head')
-      .eq('year_id', yearRecord?.id ?? '')
+    // Only count requests targeting weeks owned by THIS household
+    const myAllocationIds = (allocations ?? [])
+      .filter((a) => a.household_id === profile.household_id)
+      .map((a) => a.id)
+
+    const { count: reqCount } = myAllocationIds.length
+      ? await supabase
+          .from('request')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending_releasing_head')
+          .in('target_week_allocation_id', myAllocationIds)
+      : { count: 0 }
 
     const { count: swapCount } = await supabase
       .from('swap_proposal')
@@ -81,6 +97,7 @@ export default async function DagatalPage({
         households={households ?? []}
         currentHouseholdId={profile.household_id}
         year={currentYear}
+        approvedSwaps={approvedSwaps ?? []}
       />
     </div>
   )
