@@ -20,13 +20,21 @@ export default async function InnkaupPage() {
   const household = profile.household as unknown as { house_id: string } | null
   if (!household) redirect('/login')
 
-  const { data: items } = await supabase
-    .from('shopping_item')
-    .select(
-      '*, reported_by_household:reported_by_household_id(name), bought_by_household:bought_by_household_id(name)',
-    )
-    .eq('house_id', household.house_id)
-    .order('created_at', { ascending: false })
+  const [{ data: items }, { data: log }] = await Promise.all([
+    supabase
+      .from('shopping_item')
+      .select(
+        '*, reported_by_household:reported_by_household_id(name), bought_by_household:bought_by_household_id(name)',
+      )
+      .eq('house_id', household.house_id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('shopping_item_log')
+      .select('*, household:household_id(name)')
+      .eq('house_id', household.house_id)
+      .order('created_at', { ascending: false })
+      .limit(30),
+  ])
 
   const typedItems = (items ?? []) as unknown as {
     id: string
@@ -35,6 +43,14 @@ export default async function InnkaupPage() {
     bought_at: string | null
     reported_by_household: { name: string } | null
     bought_by_household: { name: string } | null
+  }[]
+
+  const typedLog = (log ?? []) as unknown as {
+    id: string
+    action: 'added' | 'bought' | 'deleted'
+    item_name: string
+    created_at: string
+    household: { name: string } | null
   }[]
 
   const pendingCount = typedItems.filter((i) => !i.bought_at).length
@@ -52,7 +68,7 @@ export default async function InnkaupPage() {
           )}
         </div>
       </div>
-      <ShoppingListClient items={typedItems} />
+      <ShoppingListClient items={typedItems} log={typedLog} />
     </div>
   )
 }

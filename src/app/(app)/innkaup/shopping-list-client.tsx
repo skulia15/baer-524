@@ -14,7 +14,21 @@ type ItemWithJoins = {
   bought_by_household: { name: string } | null
 }
 
-export function ShoppingListClient({ items }: { items: ItemWithJoins[] }) {
+type LogEntry = {
+  id: string
+  action: 'added' | 'bought' | 'deleted'
+  item_name: string
+  created_at: string
+  household: { name: string } | null
+}
+
+const ACTION_LABEL: Record<LogEntry['action'], string> = {
+  added: 'bætti við',
+  bought: 'keypti',
+  deleted: 'eyddi',
+}
+
+export function ShoppingListClient({ items, log }: { items: ItemWithJoins[]; log: LogEntry[] }) {
   const router = useRouter()
   const [newItem, setNewItem] = useState('')
   const [adding, setAdding] = useState(false)
@@ -120,7 +134,9 @@ export function ShoppingListClient({ items }: { items: ItemWithJoins[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-stone-500 line-through">{item.name}</p>
                   <p className="text-xs text-stone-400">
-                    {item.bought_by_household ? `Keypt af: ${item.bought_by_household.name} · ` : ''}
+                    {item.bought_by_household
+                      ? `Keypt af: ${item.bought_by_household.name} · `
+                      : ''}
                     {item.bought_at ? formatRelativeTime(item.bought_at) : ''}
                   </p>
                 </div>
@@ -131,6 +147,28 @@ export function ShoppingListClient({ items }: { items: ItemWithJoins[] }) {
                 >
                   Eyða
                 </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Activity log */}
+      {log.length > 0 && (
+        <div className="mt-4 border-t border-stone-100">
+          <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-stone-400">
+            Saga
+          </p>
+          <div className="divide-y divide-stone-50">
+            {log.map((entry) => (
+              <div key={entry.id} className="flex items-baseline justify-between px-4 py-2">
+                <p className="text-sm text-stone-600">
+                  <span className="font-medium">{entry.household?.name ?? '—'}</span>{' '}
+                  {ACTION_LABEL[entry.action]} <span className="italic">{entry.item_name}</span>
+                </p>
+                <p className="ml-3 shrink-0 text-xs text-stone-400">
+                  {formatRelativeTime(entry.created_at)}
+                </p>
               </div>
             ))}
           </div>
