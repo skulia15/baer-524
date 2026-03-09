@@ -41,7 +41,7 @@ async function seed() {
   console.log('House created:', house.id)
 
   // Create households
-  const householdRows = []
+  const householdRows: { id: string; house_id: string; name: string; color: string }[] = []
   for (const h of HOUSEHOLDS) {
     const { data, error } = await supabase
       .from('household')
