@@ -23,9 +23,10 @@ export async function setPassword(newPassword: string) {
   const { error } = await supabase.auth.updateUser({ password: newPassword })
   if (error) return { error: error.message }
 
-  await supabase.auth.updateUser({
+  const { error: metaErr } = await supabase.auth.updateUser({
     data: { needs_password_reset: false },
   })
+  if (metaErr) return { error: metaErr.message }
 
   redirect('/dagatal')
 }
@@ -40,6 +41,13 @@ export async function signupViaInvite(
   if (!payload) return { error: 'Ógildur eða útrunnin boðshlekkur' }
 
   const service = createServiceClient()
+
+  const { data: household } = await service
+    .from('household')
+    .select('id')
+    .eq('id', payload.householdId)
+    .single()
+  if (!household) return { error: 'Ógildur boðshlekkur' }
 
   const { data: authData, error: authErr } = await service.auth.admin.createUser({
     email,

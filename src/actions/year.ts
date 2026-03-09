@@ -128,10 +128,15 @@ export async function setSpringWeek(yearId: string, weekNumber: number | null) {
   const service = createServiceClient()
   await service.from('swap_proposal').delete().eq('year_id', yearId)
   await service.from('request').delete().eq('year_id', yearId)
-  await service.from('week_allocation').delete().eq('year_id', yearId)
+
+  const { error: deleteErr } = await service.from('week_allocation').delete().eq('year_id', yearId)
+  if (deleteErr) return { error: deleteErr.message }
+
   const updatedYear: Year = { ...yearRecord, spring_shared_week_number: weekNumber }
   const allocations = generateAllocations(updatedYear, households as Household[])
-  await service.from('week_allocation').insert(allocations)
+
+  const { error: insertErr } = await service.from('week_allocation').insert(allocations)
+  if (insertErr) return { error: insertErr.message }
 
   await notifyAllUsers(
     supabase,

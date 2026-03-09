@@ -28,6 +28,7 @@ export async function createSwap(
     .eq('id', allocationAId)
     .single()
   if (!allocationA) return { error: 'Vika A ekki fundin' }
+  if (allocationA.household_id !== profile.household_id) return { error: 'Þetta er ekki þín vika' }
 
   const { data: allocationB } = await supabase
     .from('week_allocation')
@@ -199,15 +200,26 @@ export async function declineSwap(swapId: string, reason?: string) {
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Ekki innskráður' }
 
-  const { data: profile } = await supabase.from('profile').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase
+    .from('profile')
+    .select('role, household_id')
+    .eq('id', user.id)
+    .single()
   if (!profile || profile.role !== 'head') return { error: 'Aðeins eigendur geta hafnað' }
 
   const { data: swap } = await supabase
     .from('swap_proposal')
-    .select('created_by')
+    .select('created_by, household_a_id, household_b_id')
     .eq('id', swapId)
     .single()
   if (!swap) return { error: 'Tillaga ekki fundin' }
+
+  if (
+    profile.household_id !== swap.household_a_id &&
+    profile.household_id !== swap.household_b_id
+  ) {
+    return { error: 'Þú getur ekki hafnað þessari tillögu' }
+  }
 
   await supabase
     .from('swap_proposal')
@@ -217,6 +229,7 @@ export async function declineSwap(swapId: string, reason?: string) {
       resolved_at: new Date().toISOString(),
     })
     .eq('id', swapId)
+    .in('status', ['pending_own_head', 'pending_other_head'])
 
   await supabase.from('notification').insert({
     user_id: swap.created_by,

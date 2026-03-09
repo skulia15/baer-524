@@ -19,7 +19,10 @@ async function verifyAdmin(): Promise<{ userId: string } | { error: string }> {
     .eq('id', user.id)
     .single()
 
-  if (profile?.email !== process.env.ADMIN_EMAIL) {
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!adminEmail) return { error: 'Admin ekki stilltur' }
+
+  if (profile?.email !== adminEmail) {
     return { error: 'Ekki heimild' }
   }
 

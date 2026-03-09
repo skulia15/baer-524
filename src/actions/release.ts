@@ -146,11 +146,32 @@ export async function retractRelease(dayReleaseIds: string[]) {
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Ekki innskráður' }
 
-  const { error } = await supabase
+  const { data: profile } = await supabase
+    .from('profile')
+    .select('household_id')
+    .eq('id', user.id)
+    .single()
+  if (!profile) return { error: 'Prófíll ekki fundinn' }
+
+  // Verify all rows belong to the caller's household before deleting
+  const { data: rows } = await supabase
     .from('day_release')
-    .delete()
+    .select('id, week_allocation:week_allocation_id(household_id)')
     .in('id', dayReleaseIds)
     .eq('status', 'released')
+
+  if (!rows || rows.length !== dayReleaseIds.length) {
+    return { error: 'Einn eða fleiri dagar fundust ekki eða eru þegar teknir' }
+  }
+
+  const allOwned = rows.every(
+    (r) =>
+      (r.week_allocation as unknown as { household_id: string } | null)?.household_id ===
+      profile.household_id,
+  )
+  if (!allOwned) return { error: 'Þetta eru ekki þínir dagar' }
+
+  const { error } = await supabase.from('day_release').delete().in('id', dayReleaseIds)
 
   if (error) return { error: error.message }
   return { success: true }

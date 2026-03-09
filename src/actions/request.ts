@@ -143,6 +143,17 @@ export async function approveRequest(requestId: string) {
       return { error: 'Þú getur ekki samþykkt þessa beiðni' }
     }
 
+    const { data: releasedDays } = await supabase
+      .from('day_release')
+      .select('date')
+      .eq('week_allocation_id', request.target_week_allocation_id)
+      .eq('status', 'released')
+      .in('date', request.requested_days)
+
+    if (!releasedDays || releasedDays.length !== request.requested_days.length) {
+      return { error: 'Einn eða fleiri dagar eru ekki lengur lausir' }
+    }
+
     const { error: claimErr } = await supabase.from('day_release').upsert(
       request.requested_days.map((date: string) => ({
         week_allocation_id: request.target_week_allocation_id,
@@ -212,15 +223,29 @@ export async function declineRequest(requestId: string, reason?: string) {
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Ekki innskráður' }
 
-  const { data: profile } = await supabase.from('profile').select('role').eq('id', user.id).single()
+  const { data: profile } = await supabase
+    .from('profile')
+    .select('role, household_id')
+    .eq('id', user.id)
+    .single()
   if (!profile || profile.role !== 'head') return { error: 'Aðeins eigendur geta hafnað' }
 
   const { data: request } = await supabase
     .from('request')
-    .select('created_by')
+    .select('created_by, requesting_household_id, allocation:target_week_allocation_id(household_id)')
     .eq('id', requestId)
     .single()
   if (!request) return { error: 'Beiðni ekki fundin' }
+
+  const releasingHouseholdId = (
+    request.allocation as unknown as { household_id: string } | null
+  )?.household_id
+  if (
+    profile.household_id !== request.requesting_household_id &&
+    profile.household_id !== releasingHouseholdId
+  ) {
+    return { error: 'Þú getur ekki hafnað þessari beiðni' }
+  }
 
   await supabase
     .from('request')
@@ -230,6 +255,7 @@ export async function declineRequest(requestId: string, reason?: string) {
       resolved_at: new Date().toISOString(),
     })
     .eq('id', requestId)
+    .in('status', ['pending_own_head', 'pending_releasing_head'])
 
   await supabase.from('notification').insert({
     user_id: request.created_by,
