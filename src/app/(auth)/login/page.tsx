@@ -26,12 +26,14 @@ export default function LoginPage() {
           <h1 className="font-display text-4xl font-semibold tracking-tight text-stone-900">
             Bær 542
           </h1>
-          <p className="mt-1.5 text-sm text-stone-500">Sumarhúsakerfi</p>
+          <p className="mt-1.5 text-sm text-stone-500">Bæjardagatal</p>
         </div>
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-stone-700">Netfang</label>
+              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-stone-700">
+                Netfang
+              </label>
               <input
                 name="email"
                 type="email"
@@ -40,7 +42,9 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-stone-700">Lykilorð</label>
+              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-stone-700">
+                Lykilorð
+              </label>
               <input
                 name="password"
                 type="password"

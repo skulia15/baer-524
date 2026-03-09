@@ -20,7 +20,7 @@ export async function generateInviteLink(
     .eq('id', user.id)
     .single()
   if (!profile || profile.role !== 'head')
-    return { error: 'Aðeins eigendur geta búið til boðshlekkur' }
+    return { error: 'Aðeins eigendur geta búið til boðshlekk' }
   if (profile.household_id !== householdId)
     return { error: 'Þú getur aðeins boðið í þína fjölskyldu' }
 

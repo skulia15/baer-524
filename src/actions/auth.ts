@@ -37,7 +37,7 @@ export async function signupViaInvite(
   password: string,
 ) {
   const payload = await verifyInviteToken(token)
-  if (!payload) return { error: 'Ógilt eða útrunnið boðshlekkur' }
+  if (!payload) return { error: 'Ógildur eða útrunnin boðshlekkur' }
 
   const service = createServiceClient()
 

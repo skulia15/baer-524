@@ -94,7 +94,7 @@ describe('generateAllocations', () => {
   const households: Household[] = [
     { id: 'hh-a', house_id: 'house-1', name: 'Arnar', color: '#22c55e' },
     { id: 'hh-b', house_id: 'house-1', name: 'Maggi', color: '#3b82f6' },
-    { id: 'hh-c', house_id: 'house-1', name: 'Keddi', color: '#f97316' },
+    { id: 'hh-c', house_id: 'house-1', name: 'Ketill', color: '#f97316' },
   ]
 
   const yearRecord: Year = {

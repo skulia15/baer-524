@@ -86,7 +86,7 @@ describe('signupViaInvite', () => {
     vi.mocked(verifyInviteToken).mockResolvedValue(null)
 
     const result = await signupViaInvite('bad-token', 'Name', 'test@example.com', 'password')
-    expect(result).toEqual({ error: 'Ógilt eða útrunnið boðshlekkur' })
+    expect(result).toEqual({ error: 'Ógildur eða útrunnin boðshlekkur' })
   })
 
   it('returns error if auth user creation fails', async () => {
@@ -102,7 +102,9 @@ describe('signupViaInvite', () => {
       },
       from: vi.fn(),
     }
-    vi.mocked(createServiceClient).mockReturnValue(serviceClient as unknown as ReturnType<typeof createServiceClient>)
+    vi.mocked(createServiceClient).mockReturnValue(
+      serviceClient as unknown as ReturnType<typeof createServiceClient>,
+    )
 
     const result = await signupViaInvite('valid-token', 'Name', 'test@example.com', 'password')
     expect(result).toEqual({ error: 'Email already in use' })
@@ -131,7 +133,9 @@ describe('signupViaInvite', () => {
       },
       from: vi.fn().mockReturnValue(fromChain),
     }
-    vi.mocked(createServiceClient).mockReturnValue(serviceClient as unknown as ReturnType<typeof createServiceClient>)
+    vi.mocked(createServiceClient).mockReturnValue(
+      serviceClient as unknown as ReturnType<typeof createServiceClient>,
+    )
 
     const result = await signupViaInvite('valid-token', 'Name', 'test@example.com', 'password')
     expect(deleteUser).toHaveBeenCalledWith('new-user-id')

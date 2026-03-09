@@ -72,7 +72,7 @@ export default function StadfestaDagaPage() {
         <h1 className="font-semibold">Staðfesta nýtingu — Vika {weekNumber}</h1>
       </div>
       <p className="mb-4 text-sm text-gray-600">
-        Merktu dagana sem þú ætlar að nota sumarhúsið. Þetta er sýnilegt öllum fjölskyldum.
+        Merktu dagana sem þú ætlar að vera í Bæ. Þetta er sýnilegt öllum fjölskyldum.
       </p>
       <DayPicker days={days} value={selected} onChange={setSelected} />
       <button
