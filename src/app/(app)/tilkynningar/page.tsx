@@ -13,7 +13,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 function getNotifHref(n: Notification): string {
   if (n.reference_type === 'request' && n.reference_id)
-    return `/tilkynningar/bidni/${n.reference_id}`
+    return `/tilkynningar/beidni/${n.reference_id}`
   if (n.reference_type === 'swap_proposal' && n.reference_id)
     return `/tilkynningar/skipti/${n.reference_id}`
   return '/tilkynningar'
@@ -72,7 +72,7 @@ export default async function TilkynningarPage() {
             {(myRequests ?? []).map((r) => {
               const alloc = r.allocation as unknown as { week_number: number; household: { name: string } | null } | null
               return (
-                <Link key={r.id} href={`/tilkynningar/bidni/${r.id}`}>
+                <Link key={r.id} href={`/tilkynningar/beidni/${r.id}`}>
                   <div className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-stone-50">
                     <p className="text-sm text-stone-800">
                       Vika {alloc?.week_number}

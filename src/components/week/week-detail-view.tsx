@@ -192,7 +192,7 @@ export function WeekDetailView({
           {!isOwn && (
             <>
               <Link
-                href={`/dagatal/vika/${allocation.week_number}/bidni`}
+                href={`/dagatal/vika/${allocation.week_number}/beidni`}
                 className="flex items-center justify-center gap-2 rounded-xl bg-green-700 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-green-800"
               >
                 <CalendarPlus className="h-4 w-4" />
