@@ -37,6 +37,12 @@ export default async function SkiptiDetailPage({
 
   if (!swap) redirect('/tilkynningar')
 
+  const { data: creatorProfile } = await supabase
+    .from('profile')
+    .select('name')
+    .eq('id', swap.created_by)
+    .single()
+
   const hhAId = (swap.household_a as { id: string }).id
   const hhBId = (swap.household_b as { id: string }).id
   const canApprove =
@@ -67,7 +73,7 @@ export default async function SkiptiDetailPage({
 
       <div className="mb-4 rounded-xl border border-stone-200 p-4">
         <p className="mb-3 flex items-center gap-2 text-sm font-medium text-stone-800">
-          {hhA.name}
+          {creatorProfile?.name ?? hhA.name} ({hhA.name})
           <ArrowLeftRight className="h-3.5 w-3.5 text-stone-400" />
           {hhB.name}
         </p>

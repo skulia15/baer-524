@@ -37,6 +37,12 @@ export default async function BidniDetailPage({
 
   if (!request) redirect('/tilkynningar')
 
+  const { data: creatorProfile } = await supabase
+    .from('profile')
+    .select('name')
+    .eq('id', request.created_by)
+    .single()
+
   const allocation = request.allocation as {
     week_number: number
     household_id: string
@@ -69,7 +75,8 @@ export default async function BidniDetailPage({
 
       <div className="mb-4 rounded-xl border border-stone-200 p-4">
         <p className="mb-2 text-sm font-medium text-stone-800">
-          {requestingHousehold.name} óskar eftir dögum í viku {allocation.week_number}
+          {creatorProfile?.name ?? requestingHousehold.name} ({requestingHousehold.name}) óskar
+          eftir dögum í viku {allocation.week_number}
           {allocation.household && ` (${allocation.household.name})`}:
         </p>
         <ul className="mb-3 space-y-1">
