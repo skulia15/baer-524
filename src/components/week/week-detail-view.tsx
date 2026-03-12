@@ -2,7 +2,6 @@ import { getHouseholdStyle } from '@/lib/colors'
 import { formatDay, formatWeekRange } from '@/lib/dates'
 import type { DayPlan, DayRelease, Household, Profile, WeekAllocation } from '@/types/db'
 import { addDays } from 'date-fns'
-import { RetractDayButton } from './retract-day-button'
 import {
   ArrowLeft,
   ArrowLeftRight,
@@ -14,6 +13,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import Link from 'next/link'
+import { RetractDayButton } from './retract-day-button'
 
 type DayTransfer = {
   from: { name: string; color: string }
@@ -46,6 +46,7 @@ export function WeekDetailView({
   const isPast = allocation.week_end < today
   const isOwn = allocation.household_id === profile.household_id
   const isShared = allocation.type !== 'household'
+  const canRelease = profile.role === 'head' || profile.email === process.env.ADMIN_EMAIL
 
   const days: Date[] = []
   const start = new Date(allocation.week_start)
@@ -55,7 +56,9 @@ export function WeekDetailView({
 
   const releasedDays = new Set(releases.filter((r) => r.status === 'released').map((r) => r.date))
   const claimedDays = new Set(releases.filter((r) => r.status === 'claimed').map((r) => r.date))
-  const releasedDayIds = new Map(releases.filter((r) => r.status === 'released').map((r) => [r.date, r.id]))
+  const releasedDayIds = new Map(
+    releases.filter((r) => r.status === 'released').map((r) => [r.date, r.id]),
+  )
   const plannedDays = new Set(plans.map((p) => p.date))
 
   const barStyle = isShared
@@ -173,13 +176,15 @@ export function WeekDetailView({
                 <CalendarCheck className="h-4 w-4" />
                 Staðfesta nýtingu
               </Link>
-              <Link
-                href={`/dagatal/vika/${allocation.week_number}/losa`}
-                className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
-              >
-                <CalendarX className="h-4 w-4" />
-                Gera daga lausa / Í boði
-              </Link>
+              {canRelease && (
+                <Link
+                  href={`/dagatal/vika/${allocation.week_number}/losa`}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+                >
+                  <CalendarX className="h-4 w-4" />
+                  Gera daga lausa / Í boði
+                </Link>
+              )}
               <Link
                 href={`/dagatal/vika/${allocation.week_number}/skipti`}
                 className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
