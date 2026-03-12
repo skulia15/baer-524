@@ -17,19 +17,18 @@ export default async function WeekPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profile').select('*').eq('id', user.id).single()
+  // Wave 1: profile + year (independent)
+  const [{ data: profile }, { data: yearRecord }] = await Promise.all([
+    supabase.from('profile').select('*').eq('id', user.id).single(),
+    supabase.from('year').select('id').eq('year', new Date().getFullYear()).single(),
+  ])
+
   if (!profile) {
     await supabase.auth.signOut()
     redirect('/login')
   }
 
-  const currentYear = new Date().getFullYear()
-  const { data: yearRecord } = await supabase
-    .from('year')
-    .select('id')
-    .eq('year', currentYear)
-    .single()
-
+  // Wave 2: allocation (needs yearId + weekNumber)
   const { data: allocation } = await supabase
     .from('week_allocation')
     .select('*')
@@ -39,26 +38,25 @@ export default async function WeekPage({
 
   if (!allocation) notFound()
 
-  const { data: household } = allocation.household_id
-    ? await supabase.from('household').select('*').eq('id', allocation.household_id).single()
-    : { data: null }
-
-  const { data: releases } = await supabase
-    .from('day_release')
-    .select('*')
-    .eq('week_allocation_id', allocation.id)
-
-  const { data: plans } = await supabase
-    .from('day_plan')
-    .select('*')
-    .eq('week_allocation_id', allocation.id)
-
-  // Approved swaps involving this allocation
-  const { data: approvedSwaps } = await supabase
-    .from('swap_proposal')
-    .select('household_a_id, household_b_id, allocation_a_id, allocation_b_id, days_a, days_b')
-    .eq('status', 'approved')
-    .or(`allocation_a_id.eq.${allocation.id},allocation_b_id.eq.${allocation.id}`)
+  // Wave 3: all queries that depend only on allocation.id / year_id
+  const [{ data: household }, { data: releases }, { data: plans }, { data: approvedSwaps }, { data: allWeeks }] =
+    await Promise.all([
+      allocation.household_id
+        ? supabase.from('household').select('*').eq('id', allocation.household_id).single()
+        : Promise.resolve({ data: null }),
+      supabase.from('day_release').select('*').eq('week_allocation_id', allocation.id),
+      supabase.from('day_plan').select('*').eq('week_allocation_id', allocation.id),
+      supabase
+        .from('swap_proposal')
+        .select('household_a_id, household_b_id, allocation_a_id, allocation_b_id, days_a, days_b')
+        .eq('status', 'approved')
+        .or(`allocation_a_id.eq.${allocation.id},allocation_b_id.eq.${allocation.id}`),
+      supabase
+        .from('week_allocation')
+        .select('week_number')
+        .eq('year_id', yearRecord?.id ?? '')
+        .order('week_number'),
+    ])
 
   // All household IDs referenced by swaps + claimed releases
   const householdIdSet = new Set<string>()
@@ -71,6 +69,7 @@ export default async function WeekPage({
     if (r.claimed_by_household_id) householdIdSet.add(r.claimed_by_household_id)
   }
 
+  // Wave 4: transferHouseholds (depends on swap/release results)
   const { data: transferHouseholds } = householdIdSet.size
     ? await supabase.from('household').select('id, name, color').in('id', [...householdIdSet])
     : { data: [] }
@@ -99,12 +98,6 @@ export default async function WeekPage({
       if (from && to) dayTransfers[r.date] = { from, to, type: 'request' }
     }
   }
-
-  const { data: allWeeks } = await supabase
-    .from('week_allocation')
-    .select('week_number')
-    .eq('year_id', yearRecord?.id ?? '')
-    .order('week_number')
 
   const weekNums = (allWeeks ?? []).map((w) => w.week_number)
   const currentIdx = weekNums.indexOf(weekNumber)
