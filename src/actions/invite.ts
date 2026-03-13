@@ -16,10 +16,11 @@ export async function generateInviteLink(
 
   const { data: profile } = await supabase
     .from('profile')
-    .select('role, household_id')
+    .select('role, household_id, email')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.role !== 'head')
+  const isAdmin = profile?.email === process.env.ADMIN_EMAIL
+  if (!profile || (profile.role !== 'head' && !isAdmin))
     return { error: 'Aðeins eigendur geta búið til boðshlekk' }
   if (profile.household_id !== householdId)
     return { error: 'Þú getur aðeins boðið í þína fjölskyldu' }
