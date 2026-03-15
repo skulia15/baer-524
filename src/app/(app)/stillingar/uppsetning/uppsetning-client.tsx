@@ -1,11 +1,11 @@
 'use client'
 
-import { saveRotation, setSpringWeek } from '@/actions/year'
+import { saveRotation, updateSpringWeek } from '@/actions/year'
 import { RotationSorter } from '@/components/forms/rotation-sorter'
 import { useBanner } from '@/hooks/use-banner'
 import { formatWeekRange } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/client'
-import { generateAllocations } from '@/lib/weeks'
+import { SHARED_WEEK_HAS_OWNER, generateAllocations } from '@/lib/weeks'
 import type { Household, Year } from '@/types/db'
 import { ChevronLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -19,6 +19,7 @@ export function UppsetningClient() {
   const [order, setOrder] = useState<string[]>([])
   const [springWeek, setSpringWeekState] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
+  const [springLoading, setSpringLoading] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
@@ -55,9 +56,6 @@ export function UppsetningClient() {
     if (!yearRecord) return
     setLoading(true)
     const result = await saveRotation(yearRecord.id, order)
-    if (springWeek !== yearRecord.spring_shared_week_number) {
-      await setSpringWeek(yearRecord.id, springWeek)
-    }
     if (result.error) {
       showBanner(result.error, 'error')
     } else {
@@ -65,6 +63,18 @@ export function UppsetningClient() {
       router.push('/dagatal')
     }
     setLoading(false)
+  }
+
+  async function handleSaveSpringWeek() {
+    if (!yearRecord) return
+    setSpringLoading(true)
+    const result = await updateSpringWeek(yearRecord.id, springWeek)
+    if (result.error) {
+      showBanner(result.error, 'error')
+    } else {
+      showBanner('Vinnuvika vistuð')
+    }
+    setSpringLoading(false)
   }
 
   return (
@@ -85,21 +95,31 @@ export function UppsetningClient() {
         <RotationSorter households={households} order={order} onChange={setOrder} />
       </section>
 
-      <section className="mb-6">
-        <p className="mb-2 text-sm font-medium text-stone-700">Vinnuvika:</p>
-        <select
-          value={springWeek ?? ''}
-          onChange={(e) => setSpringWeekState(e.target.value ? Number(e.target.value) : null)}
-          className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
-        >
-          <option value="">Engin</option>
-          {preview.map((a) => (
-            <option key={a.week_number} value={a.week_number}>
-              V.{a.week_number} {formatWeekRange(a.week_start, a.week_end)}
-            </option>
-          ))}
-        </select>
-      </section>
+      {SHARED_WEEK_HAS_OWNER && (
+        <section className="mb-6">
+          <p className="mb-2 text-sm font-medium text-stone-700">Vinnuvika:</p>
+          <select
+            value={springWeek ?? ''}
+            onChange={(e) => setSpringWeekState(e.target.value ? Number(e.target.value) : null)}
+            className="mb-3 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
+          >
+            <option value="">Engin</option>
+            {preview.map((a) => (
+              <option key={a.week_number} value={a.week_number}>
+                V.{a.week_number} {formatWeekRange(a.week_start, a.week_end)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleSaveSpringWeek}
+            disabled={springLoading}
+            className="w-full rounded-xl bg-green-700 py-3 text-sm font-medium text-white transition-colors hover:bg-green-800 disabled:opacity-50"
+          >
+            {springLoading ? 'Vistar...' : 'Vista'}
+          </button>
+        </section>
+      )}
 
       {preview.length > 0 && (
         <section className="mb-6">

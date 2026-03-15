@@ -95,7 +95,7 @@ export async function saveRotation(yearId: string, rotationOrder: string[]) {
   return { success: true }
 }
 
-export async function setSpringWeek(yearId: string, weekNumber: number | null) {
+export async function updateSpringWeek(yearId: string, weekNumber: number | null) {
   const supabase = await createClient()
 
   const {
@@ -125,24 +125,25 @@ export async function setSpringWeek(yearId: string, weekNumber: number | null) {
 
   await supabase.from('year').update({ spring_shared_week_number: weekNumber }).eq('id', yearId)
 
-  const service = createServiceClient()
-  await service.from('swap_proposal').delete().eq('year_id', yearId)
-  await service.from('request').delete().eq('year_id', yearId)
-
-  const { error: deleteErr } = await service.from('week_allocation').delete().eq('year_id', yearId)
-  if (deleteErr) return { error: deleteErr.message }
-
   const updatedYear: Year = { ...yearRecord, spring_shared_week_number: weekNumber }
   const allocations = generateAllocations(updatedYear, households as Household[])
 
-  const { error: insertErr } = await service.from('week_allocation').insert(allocations)
-  if (insertErr) return { error: insertErr.message }
+  const service = createServiceClient()
+  const { data: existingRows } = await service
+    .from('week_allocation')
+    .select('id, week_number')
+    .eq('year_id', yearId)
 
-  await notifyAllUsers(
-    supabase,
-    yearRecord.house_id,
-    'Vinnuvika ' + yearRecord.year + ' uppfærð',
-  )
+  const rowById = new Map((existingRows ?? []).map((r) => [r.week_number, r.id]))
+
+  for (const allocation of allocations) {
+    const id = rowById.get(allocation.week_number)
+    if (!id) continue
+    await service
+      .from('week_allocation')
+      .update({ type: allocation.type, household_id: allocation.household_id })
+      .eq('id', id)
+  }
 
   revalidatePath('/dagatal')
   return { success: true }
