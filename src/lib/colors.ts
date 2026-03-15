@@ -26,9 +26,13 @@ export function getHouseholdStyle(color: string): CSSProperties {
 }
 
 export function getHouseholdSharedStyle(color: string): CSSProperties {
+  const rgb = hexToRgb(color)
+  const base = rgb ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)` : 'rgba(156,163,175,0.18)'
+  const stripe = rgb ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.06)` : 'rgba(156,163,175,0.06)'
   return {
-    background: `repeating-linear-gradient(-45deg, ${color}, ${color} 8px, rgba(255,255,255,0.22) 8px, rgba(255,255,255,0.22) 16px)`,
-    color: getContrastColor(color),
+    background: `repeating-linear-gradient(-45deg, ${base}, ${base} 10px, ${stripe} 10px, ${stripe} 14px)`,
+    backgroundColor: '#ffffff',
+    color: '#1c1917',
   }
 }
 

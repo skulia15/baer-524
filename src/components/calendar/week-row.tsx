@@ -47,7 +47,7 @@ export function WeekRow({
   const barStyle = isShared
     ? household
       ? getHouseholdSharedStyle(household.color)
-      : { background: 'repeating-linear-gradient(-45deg, #9ca3af, #9ca3af 8px, rgba(255,255,255,0.22) 8px, rgba(255,255,255,0.22) 16px)', color: '#ffffff' }
+      : { background: 'repeating-linear-gradient(-45deg, rgba(156,163,175,0.18), rgba(156,163,175,0.18) 10px, rgba(156,163,175,0.06) 10px, rgba(156,163,175,0.06) 14px)', backgroundColor: '#ffffff', color: '#1c1917' }
     : isOwn && isFullyReleased && household
       ? getHouseholdFadedStyle(household.color)
       : !isOwn && hasAvailable && household

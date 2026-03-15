@@ -94,9 +94,11 @@ export function AdminClient({ profiles, households }: Props) {
                   style={{ backgroundColor: p.household.color }}
                 />
               )}
-              <span className="flex-1 font-medium text-stone-900">{p.name}</span>
-              <span className="text-sm text-stone-500">{p.email}</span>
-              <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+              <span className="flex-1 min-w-0">
+                <span className="block font-medium text-stone-900">{p.name}</span>
+                <span className="block truncate text-xs text-stone-500">{p.email}</span>
+              </span>
+              <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
                 {p.role === 'head' ? 'Eigandi' : 'Fjölskyldumeðlimur'}
               </span>
             </button>
