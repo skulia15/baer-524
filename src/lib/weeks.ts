@@ -75,16 +75,20 @@ export function generateAllocations(
     }
 
     if (week.week_number === verslunarWeekNum) {
-      const ownerId = SHARED_WEEK_HAS_OWNER
-        ? yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
-        : null
-      return { ...base, type: 'shared_verslunarmannahelgi' as const, household_id: ownerId ?? null }
+      if (SHARED_WEEK_HAS_OWNER) {
+        const householdId = yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
+        rotationIndex++ // household sacrifices their slot
+        return { ...base, type: 'shared_verslunarmannahelgi' as const, household_id: householdId }
+      }
+      return { ...base, type: 'shared_verslunarmannahelgi' as const, household_id: null }
     }
     if (springWeekNum && week.week_number === springWeekNum) {
-      const ownerId = SHARED_WEEK_HAS_OWNER
-        ? yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
-        : null
-      return { ...base, type: 'shared_spring' as const, household_id: ownerId ?? null }
+      if (SHARED_WEEK_HAS_OWNER) {
+        const householdId = yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
+        rotationIndex++ // household sacrifices their slot
+        return { ...base, type: 'shared_spring' as const, household_id: householdId }
+      }
+      return { ...base, type: 'shared_spring' as const, household_id: null }
     }
 
     const householdId =

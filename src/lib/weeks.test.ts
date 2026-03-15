@@ -147,11 +147,11 @@ describe('generateAllocations', () => {
     }
   })
 
-  it('shared week owner matches rotation slot without advancing rotation', () => {
+  it('shared week sacrifices rotation slot (advances index)', () => {
     const withSpring: Year = { ...yearRecord, spring_shared_week_number: 5 }
     const allocations = generateAllocations(withSpring, households)
     const spring = allocations.find((a) => a.week_number === 5)
-    // Week 5: weeks 1–4 are household → rotationIndex 4 → 4 % 3 = 1 → 'hh-b'
+    // Week 5: weeks 1–4 are household → rotationIndex 4 → 4 % 3 = 1 → 'hh-b' (sacrificed)
     expect(spring!.type).toBe('shared_spring')
     if (SHARED_WEEK_HAS_OWNER) {
       expect(spring!.household_id).toBe('hh-b')
@@ -159,9 +159,9 @@ describe('generateAllocations', () => {
     // Week 4 (household before shared): rotationIndex 3 → 3 % 3 = 0 → 'hh-a'
     const week4 = allocations.find((a) => a.week_number === 4)
     expect(week4!.household_id).toBe('hh-a')
-    // Week 6 (household after shared): rotationIndex 4 → 4 % 3 = 1 → 'hh-b' (same as shared, rotation not advanced)
+    // Week 6 (household after shared): rotationIndex 5 → 5 % 3 = 2 → 'hh-c' (hh-b was consumed by shared)
     const week6 = allocations.find((a) => a.week_number === 6)
-    expect(week6!.household_id).toBe('hh-b')
+    expect(week6!.household_id).toBe('hh-c')
   })
 
   it('rotation cycles through households in order', () => {
@@ -176,13 +176,23 @@ describe('generateAllocations', () => {
   it('rotation resumes correctly after shared week', () => {
     const withSpring: Year = { ...yearRecord, spring_shared_week_number: 5 }
     const allocations = generateAllocations(withSpring, households)
-    const household = allocations.filter((a) => a.type === 'household')
-    // Rotation should continue uninterrupted across shared week
-    const ids = household.map((a) => a.household_id)
-    const expectedPattern = ['hh-a', 'hh-b', 'hh-c']
-    ids.forEach((id, i) => {
-      expect(id).toBe(expectedPattern[i % 3])
-    })
+    if (SHARED_WEEK_HAS_OWNER) {
+      // With sacrifice semantics, ALL allocations (household + shared) consume one rotation slot each.
+      // Every allocation's household_id should match rotation_order[idx % 3] in sequence.
+      const rotation_order = ['hh-a', 'hh-b', 'hh-c']
+      let idx = 0
+      for (const alloc of allocations) {
+        expect(alloc.household_id).toBe(rotation_order[idx % 3])
+        idx++
+      }
+    } else {
+      // With pause semantics, only household-type weeks consume rotation slots.
+      const householdAllocs = allocations.filter((a) => a.type === 'household')
+      const rotation_order = ['hh-a', 'hh-b', 'hh-c']
+      householdAllocs.forEach((a, i) => {
+        expect(a.household_id).toBe(rotation_order[i % 3])
+      })
+    }
   })
 
   it('week_start and week_end are ISO date strings', () => {
