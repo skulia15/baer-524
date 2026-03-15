@@ -41,7 +41,9 @@ export default async function TengiliðirPage() {
                   />
                 )}
                 <p className="font-medium text-stone-900">{head.name}</p>
-                <p className="text-xs text-stone-400">{household?.name}</p>
+                {household?.name && household.name !== head.name && (
+                  <p className="text-xs text-stone-400">{household.name}</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <a
