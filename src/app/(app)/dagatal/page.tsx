@@ -94,7 +94,11 @@ export default async function DagatalPage({
       <CalendarViewClient
         allocations={allocations ?? []}
         releases={releases ?? []}
-        households={households ?? []}
+        households={(households ?? []).sort(
+          (a, b) =>
+            (yearRecord?.rotation_order ?? []).indexOf(a.id) -
+            (yearRecord?.rotation_order ?? []).indexOf(b.id),
+        )}
         currentHouseholdId={profile.household_id}
         year={currentYear}
         approvedSwaps={approvedSwaps ?? []}
