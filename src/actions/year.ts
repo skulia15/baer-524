@@ -45,11 +45,11 @@ export async function saveRotation(yearId: string, rotationOrder: string[]) {
 
   const { data: profile } = await supabase
     .from('profile')
-    .select('role, household_id')
+    .select('email, household_id')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.role !== 'head')
-    return { error: 'Aðeins eigendur geta breytt snúningsröð' }
+  if (!profile || profile.email !== process.env.ADMIN_EMAIL)
+    return { error: 'Aðeins stjórnandi getur breytt snúningsröð' }
 
   const { data: yearRecord } = await supabase.from('year').select('*').eq('id', yearId).single()
   if (!yearRecord) return { error: 'Ár ekki fundið' }
@@ -103,8 +103,8 @@ export async function setSpringWeek(yearId: string, weekNumber: number | null) {
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Ekki innskráður' }
 
-  const { data: profile } = await supabase.from('profile').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'head') return { error: 'Aðeins eigendur geta stillt vorsviku' }
+  const { data: profile } = await supabase.from('profile').select('email').eq('id', user.id).single()
+  if (!profile || profile.email !== process.env.ADMIN_EMAIL) return { error: 'Aðeins stjórnandi getur stillt vorsviku' }
 
   const { data: yearRecord } = await supabase.from('year').select('*').eq('id', yearId).single()
   if (!yearRecord) return { error: 'Ár ekki fundið' }

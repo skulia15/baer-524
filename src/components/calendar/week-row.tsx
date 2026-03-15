@@ -1,6 +1,6 @@
 'use client'
 
-import { getHouseholdFadedStyle, getHouseholdStyle } from '@/lib/colors'
+import { getHouseholdFadedStyle, getHouseholdSharedStyle, getHouseholdStyle } from '@/lib/colors'
 import { formatWeekRange } from '@/lib/dates'
 import type { DayRelease, Household, WeekAllocation } from '@/types/db'
 import Link from 'next/link'
@@ -46,8 +46,8 @@ export function WeekRow({
 
   const barStyle = isShared
     ? household
-      ? getHouseholdStyle(household.color)
-      : { backgroundColor: '#9ca3af', color: '#ffffff' }
+      ? getHouseholdSharedStyle(household.color)
+      : { background: 'repeating-linear-gradient(-45deg, #9ca3af, #9ca3af 8px, rgba(255,255,255,0.22) 8px, rgba(255,255,255,0.22) 16px)', color: '#ffffff' }
     : isOwn && isFullyReleased && household
       ? getHouseholdFadedStyle(household.color)
       : !isOwn && hasAvailable && household

@@ -25,6 +25,13 @@ export function getHouseholdStyle(color: string): CSSProperties {
   }
 }
 
+export function getHouseholdSharedStyle(color: string): CSSProperties {
+  return {
+    background: `repeating-linear-gradient(-45deg, ${color}, ${color} 8px, rgba(255,255,255,0.22) 8px, rgba(255,255,255,0.22) 16px)`,
+    color: getContrastColor(color),
+  }
+}
+
 export function getHouseholdFadedStyle(color: string): CSSProperties {
   const rgb = hexToRgb(color)
   if (!rgb) return { backgroundColor: color, color: '#000000', opacity: 0.33 }

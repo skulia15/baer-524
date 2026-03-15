@@ -121,10 +121,14 @@ export function MonthGrid({
           const claimedRgb = claimedByHousehold ? hexToRgb(claimedByHousehold.color) : null
 
           const rgb = household ? hexToRgb(household.color) : null
+          const sharedBase = rgb
+            ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`
+            : 'rgba(156,163,175,0.18)'
+          const sharedStripe = rgb
+            ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.05)`
+            : 'rgba(156,163,175,0.05)'
           const bgColor = isShared
-            ? rgb
-              ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`
-              : 'rgba(156,163,175,0.15)'
+            ? undefined
             : claimedRgb
               ? `rgba(${claimedRgb.r},${claimedRgb.g},${claimedRgb.b},0.2)`
               : rgb
@@ -132,6 +136,9 @@ export function MonthGrid({
                   ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.12)`
                   : `rgba(${rgb.r},${rgb.g},${rgb.b},0.2)`
                 : 'white'
+          const bgImage = isShared
+            ? `repeating-linear-gradient(-45deg, ${sharedBase}, ${sharedBase} 4px, ${sharedStripe} 4px, ${sharedStripe} 8px)`
+            : undefined
 
           const accentColor = household?.color ?? (isShared ? '#9ca3af' : null)
 
@@ -139,7 +146,7 @@ export function MonthGrid({
             <Link key={ds} href={allocation ? `/dagatal/vika/${allocation.week_number}` : '#'}>
               <div
                 className={`relative min-h-[52px] bg-white p-1 flex flex-col ${isPast ? 'opacity-50' : ''}`}
-                style={{ backgroundColor: bgColor }}
+                style={{ backgroundColor: bgColor, backgroundImage: bgImage }}
               >
                 {/* Allocation color strip at top */}
                 {accentColor && (

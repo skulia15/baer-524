@@ -27,29 +27,29 @@ export default async function StillingarPage() {
         <h1 className="font-semibold text-stone-900">Stillingar</h1>
       </div>
       <div className="divide-y divide-stone-100">
+        {isAdmin && (
+          <Link
+            href="/stillingar/uppsetning"
+            className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50"
+          >
+            <span className="flex items-center gap-3 text-sm text-stone-800">
+              <CalendarDays className="h-4 w-4 text-stone-400" />
+              Uppsetning árs
+            </span>
+            <ChevronRight className="h-4 w-4 text-stone-400" />
+          </Link>
+        )}
         {isHead && (
-          <>
-            <Link
-              href="/stillingar/uppsetning"
-              className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50"
-            >
-              <span className="flex items-center gap-3 text-sm text-stone-800">
-                <CalendarDays className="h-4 w-4 text-stone-400" />
-                Uppsetning árs
-              </span>
-              <ChevronRight className="h-4 w-4 text-stone-400" />
-            </Link>
-            <Link
-              href="/stillingar/bjoda"
-              className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50"
-            >
-              <span className="flex items-center gap-3 text-sm text-stone-800">
-                <UserPlus className="h-4 w-4 text-stone-400" />
-                Bjóða notanda
-              </span>
-              <ChevronRight className="h-4 w-4 text-stone-400" />
-            </Link>
-          </>
+          <Link
+            href="/stillingar/bjoda"
+            className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50"
+          >
+            <span className="flex items-center gap-3 text-sm text-stone-800">
+              <UserPlus className="h-4 w-4 text-stone-400" />
+              Bjóða notanda
+            </span>
+            <ChevronRight className="h-4 w-4 text-stone-400" />
+          </Link>
         )}
         <Link
           href="/stillingar/tengilidir"
