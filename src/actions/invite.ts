@@ -24,7 +24,7 @@ async function createInviteUrl(
   if (error || !invite) return { error: error?.message ?? 'Ekki tókst að búa til boðshlekk' }
 
   const token = await signInviteToken(householdId, invite.id)
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://baer524.vercel.app').replace(/\/$/, '')
   return { url: `${base}/signup?token=${token}` }
 }
 
