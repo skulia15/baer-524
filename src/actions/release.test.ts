@@ -10,9 +10,10 @@ vi.mock('@/lib/supabase/service', () => ({
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import type { FakeDb } from '@/test/fake-supabase'
 import { useDb } from '@/test/use-db'
-import { USER, WEEK, WEEK10_DAYS, world } from '@/test/world'
-import { releaseDays, retractRelease } from './release'
+import { HH, USER, WEEK, WEEK10_DAYS, world } from '@/test/world'
+import { releaseDays, retractRelease, setDayPlans } from './release'
 
 type MockSupabase = ReturnType<typeof createClient> extends Promise<infer T> ? T : never
 type ServiceClient = ReturnType<typeof createServiceClient>
@@ -160,5 +161,48 @@ describe('releaseDays — validation', () => {
 
     expect(result.error).toBe('Dagar verða að vera innan vikunnar')
     expect(db.rows('day_release')).toHaveLength(0)
+  })
+})
+
+describe('setDayPlans — shared weeks', () => {
+  const plans = (db: FakeDb) =>
+    db
+      .rows('day_plan')
+      .map((p) => [p.household_id, p.date])
+      .sort()
+
+  it('lets several households sign up for the same shared days', async () => {
+    const db = useDb(world(USER.memberA))
+    await setDayPlans(WEEK.shared13, ['2026-03-27', '2026-03-28'])
+
+    db.userId = USER.headB
+    const result = await setDayPlans(WEEK.shared13, ['2026-03-28'])
+
+    expect(result).toEqual({ success: true })
+    expect(plans(db)).toEqual([
+      [HH.A, '2026-03-27'],
+      [HH.A, '2026-03-28'],
+      [HH.B, '2026-03-28'],
+    ])
+  })
+
+  it("changing your sign-up leaves other households' untouched", async () => {
+    const db = useDb(world(USER.headB))
+    db.tables.day_plan = [
+      { id: 'p1', week_allocation_id: WEEK.shared13, date: '2026-03-28', household_id: HH.A },
+    ]
+
+    await setDayPlans(WEEK.shared13, [])
+
+    expect(plans(db)).toEqual([[HH.A, '2026-03-28']])
+  })
+
+  it("still refuses plans in another household's own week", async () => {
+    const db = useDb(world(USER.headB))
+
+    const result = await setDayPlans(WEEK.a10, [WEEK10_DAYS[0]])
+
+    expect(result.error).toBe('Ekki heimild')
+    expect(db.rows('day_plan')).toHaveLength(0)
   })
 })

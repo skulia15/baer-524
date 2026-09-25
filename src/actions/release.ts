@@ -103,12 +103,20 @@ export async function setDayPlans(weekAllocationId: string, dates: string[]) {
 
   const { data: alloc } = await supabase
     .from('week_allocation')
-    .select('household_id')
+    .select('household_id, type')
     .eq('id', weekAllocationId)
     .single()
-  if (!alloc || alloc.household_id !== profile.household_id) return { error: 'Ekki heimild' }
+  // Own weeks: the owning household plans its days. Shared weeks: every household may sign up.
+  const isShared = alloc?.type !== 'household'
+  if (!alloc || (!isShared && alloc.household_id !== profile.household_id)) {
+    return { error: 'Ekki heimild' }
+  }
 
-  await supabase.from('day_plan').delete().eq('week_allocation_id', weekAllocationId)
+  await supabase
+    .from('day_plan')
+    .delete()
+    .eq('week_allocation_id', weekAllocationId)
+    .eq('household_id', profile.household_id)
 
   if (dates.length > 0) {
     const { error } = await supabase.from('day_plan').insert(

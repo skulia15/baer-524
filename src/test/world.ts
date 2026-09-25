@@ -9,7 +9,7 @@ export const USER = {
   headB: 'u-head-b',
   headC: 'u-head-c',
 } as const
-export const WEEK = { a10: 'wa-10', b11: 'wa-11', c12: 'wa-12' } as const
+export const WEEK = { a10: 'wa-10', b11: 'wa-11', c12: 'wa-12', shared13: 'wa-13' } as const
 export const YEAR_ID = 'yr-2026'
 
 // Thu 5 Mar 2026 → Wed 11 Mar 2026
@@ -82,6 +82,15 @@ export function world(asUser: string | null = USER.headA) {
         week_end: '2026-03-25',
         type: 'household',
         household_id: HH.C,
+      },
+      {
+        id: WEEK.shared13,
+        year_id: YEAR_ID,
+        week_number: 13,
+        week_start: '2026-03-26',
+        week_end: '2026-04-01',
+        type: 'shared_spring',
+        household_id: null,
       },
     ],
     day_release: [],

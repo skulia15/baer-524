@@ -33,6 +33,8 @@ interface WeekDetailViewProps {
   dayTransfers: Record<string, DayTransfer>
   year: number
   isAdmin: boolean
+  /** Households referenced on this page (plans, transfers), for names and colours */
+  households: Pick<Household, 'id' | 'name' | 'color'>[]
 }
 
 export function WeekDetailView({
@@ -46,6 +48,7 @@ export function WeekDetailView({
   dayTransfers,
   year,
   isAdmin,
+  households,
 }: WeekDetailViewProps) {
   const today = new Date().toISOString().split('T')[0]
   const isPast = allocation.week_end < today
@@ -65,6 +68,14 @@ export function WeekDetailView({
     releases.filter((r) => r.status === 'released').map((r) => [r.date, r.id]),
   )
   const plannedDays = new Set(plans.map((p) => p.date))
+  const householdById = new Map(households.map((h) => [h.id, h]))
+  // Shared weeks: which households have signed up for each day
+  const signupsByDay = new Map<string, Pick<Household, 'id' | 'name' | 'color'>[]>()
+  for (const p of plans) {
+    const hh = householdById.get(p.household_id)
+    if (hh) signupsByDay.set(p.date, [...(signupsByDay.get(p.date) ?? []), hh])
+  }
+  const weAreSignedUp = plans.some((p) => p.household_id === profile.household_id)
 
   const barStyle = household
     ? getHouseholdStyle(household.color)
@@ -122,7 +133,11 @@ export function WeekDetailView({
 
           let statusLabel: string
           let statusColor: string
-          if (isClaimed) {
+          const signups = isShared ? (signupsByDay.get(dateStr) ?? []) : []
+          if (isShared) {
+            statusLabel = signups.length ? `${signups.length} skráð` : 'Enginn skráður'
+            statusColor = signups.length ? 'text-green-700' : 'text-stone-400'
+          } else if (isClaimed) {
             statusLabel = 'Krafist'
             statusColor = 'text-green-700'
           } else if (isReleased) {
@@ -149,6 +164,19 @@ export function WeekDetailView({
                   <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
                 </div>
               </div>
+              {signups.length > 0 && (
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-600">
+                  {signups.map((hh) => (
+                    <span key={hh.id} className="flex items-center gap-1">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: hh.color }}
+                      />
+                      {hh.name}
+                    </span>
+                  ))}
+                </div>
+              )}
               {transfer && (
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-stone-500">
                   <span
@@ -171,6 +199,18 @@ export function WeekDetailView({
           )
         })}
       </div>
+
+      {!isPast && isShared && (
+        <div className="mt-4 flex flex-col gap-2 px-4 pb-24">
+          <Link
+            href={weekHref(year, allocation.week_number, 'stadfesta')}
+            className="flex items-center justify-center gap-2 rounded-xl bg-green-700 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-green-800"
+          >
+            <CalendarCheck className="h-4 w-4" />
+            {weAreSignedUp ? 'Breyta skráningu' : 'Skrá okkur'}
+          </Link>
+        </div>
+      )}
 
       {!isPast && !isShared && (
         <div className="mt-4 flex flex-col gap-2 px-4 pb-24">

@@ -78,6 +78,7 @@ export default async function WeekPage({
   for (const r of releases ?? []) {
     if (r.claimed_by_household_id) householdIdSet.add(r.claimed_by_household_id)
   }
+  for (const p of plans ?? []) householdIdSet.add(p.household_id)
 
   // Wave 4: transferHouseholds (depends on swap/release results)
   const { data: transferHouseholds } = householdIdSet.size
@@ -141,6 +142,7 @@ export default async function WeekPage({
         dayTransfers={dayTransfers}
         year={year}
         isAdmin={isAdmin(user)}
+        households={transferHouseholds ?? []}
       />
     </WeekSwipeWrapper>
   )
