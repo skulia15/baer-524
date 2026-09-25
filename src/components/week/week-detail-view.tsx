@@ -32,6 +32,7 @@ interface WeekDetailViewProps {
   nextWeek: number | null
   dayTransfers: Record<string, DayTransfer>
   year: number
+  isAdmin: boolean
 }
 
 export function WeekDetailView({
@@ -44,12 +45,13 @@ export function WeekDetailView({
   nextWeek,
   dayTransfers,
   year,
+  isAdmin,
 }: WeekDetailViewProps) {
   const today = new Date().toISOString().split('T')[0]
   const isPast = allocation.week_end < today
   const isOwn = allocation.household_id === profile.household_id
   const isShared = allocation.type !== 'household'
-  const canRelease = profile.role === 'head' || profile.email === process.env.ADMIN_EMAIL
+  const canRelease = profile.role === 'head' || isAdmin
 
   const days: Date[] = []
   const start = new Date(allocation.week_start)

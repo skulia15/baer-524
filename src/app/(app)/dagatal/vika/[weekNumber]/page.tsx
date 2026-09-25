@@ -1,5 +1,6 @@
 import { WeekDetailView } from '@/components/week/week-detail-view'
 import { WeekSwipeWrapper } from '@/components/week/week-swipe-wrapper'
+import { isAdmin } from '@/lib/admin'
 import { yearFromParam } from '@/lib/rotation-year'
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
@@ -139,6 +140,7 @@ export default async function WeekPage({
         nextWeek={nextWeek}
         dayTransfers={dayTransfers}
         year={year}
+        isAdmin={isAdmin(user)}
       />
     </WeekSwipeWrapper>
   )

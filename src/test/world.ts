@@ -90,6 +90,21 @@ export function world(asUser: string | null = USER.headA) {
     swap_proposal: [],
     notification: [],
   })
+  // Mirrors migration 0011: clients may only read these; server actions write via service role
+  db.clientReadOnly = new Set([
+    'profile',
+    'house',
+    'household',
+    'year',
+    'week_allocation',
+    'day_release',
+    'request',
+    'swap_proposal',
+    'allocation_change',
+  ])
+  db.authEmails = Object.fromEntries(
+    db.rows('profile').map((p) => [p.id as string, p.email as string]),
+  )
   db.userId = asUser
   return db
 }

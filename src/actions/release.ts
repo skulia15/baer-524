@@ -1,5 +1,6 @@
 'use server'
 
+import { isAdmin } from '@/lib/admin'
 import { areDaysInWeek } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -30,7 +31,7 @@ export async function releaseDays(weekAllocationId: string, dates: string[]) {
     return { error: 'Þetta er ekki þín vika' }
   }
 
-  const canRelease = profile.role === 'head' || profile.email === process.env.ADMIN_EMAIL
+  const canRelease = profile.role === 'head' || isAdmin(user)
   if (!canRelease) {
     return { error: 'Aðeins eigendur geta losað daga' }
   }

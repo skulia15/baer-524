@@ -10,7 +10,7 @@ export function useDb(db: FakeDb) {
     db.client() as unknown as Awaited<ReturnType<typeof createClient>>,
   )
   vi.mocked(createServiceClient).mockReturnValue(
-    db.client() as unknown as ReturnType<typeof createServiceClient>,
+    db.client('service') as unknown as ReturnType<typeof createServiceClient>,
   )
   return db
 }

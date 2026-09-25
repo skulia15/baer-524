@@ -50,7 +50,7 @@ export async function createRequest(
   const isHead = profile.role === 'head'
   const status = isHead ? 'pending_releasing_head' : 'pending_own_head'
 
-  const { data: request, error } = await supabase
+  const { data: request, error } = await createServiceClient()
     .from('request')
     .insert({
       year_id: allocation.year_id,
@@ -157,7 +157,10 @@ export async function approveRequest(requestId: string) {
       return { error: 'Þú getur ekki samþykkt þessa beiðni' }
     }
 
-    await supabase.from('request').update({ status: 'pending_releasing_head' }).eq('id', requestId)
+    await createServiceClient()
+      .from('request')
+      .update({ status: 'pending_releasing_head' })
+      .eq('id', requestId)
 
     const { data: releasingHead } = await supabase
       .from('profile')
@@ -204,19 +207,21 @@ export async function approveRequest(requestId: string) {
       return { error: 'Einn eða fleiri dagar eru ekki lengur lausir' }
     }
 
-    const { error: claimErr } = await supabase.from('day_release').upsert(
-      request.requested_days.map((date: string) => ({
-        week_allocation_id: request.target_week_allocation_id,
-        date,
-        status: 'claimed' as const,
-        claimed_by_household_id: request.requesting_household_id,
-      })),
-      { onConflict: 'week_allocation_id,date' },
-    )
+    const { error: claimErr } = await createServiceClient()
+      .from('day_release')
+      .upsert(
+        request.requested_days.map((date: string) => ({
+          week_allocation_id: request.target_week_allocation_id,
+          date,
+          status: 'claimed' as const,
+          claimed_by_household_id: request.requesting_household_id,
+        })),
+        { onConflict: 'week_allocation_id,date' },
+      )
 
     if (claimErr) return { error: claimErr.message }
 
-    await supabase
+    await createServiceClient()
       .from('request')
       .update({ status: 'approved', resolved_at: new Date().toISOString() })
       .eq('id', requestId)
@@ -230,7 +235,7 @@ export async function approveRequest(requestId: string) {
       .neq('id', requestId)
 
     if (conflicting && conflicting.length > 0) {
-      await supabase
+      await createServiceClient()
         .from('request')
         .update({ status: 'cancelled', resolved_at: new Date().toISOString() })
         .in(
@@ -312,7 +317,7 @@ export async function declineRequest(requestId: string, reason?: string) {
     return { error: 'Þú getur ekki hafnað þessari beiðni' }
   }
 
-  const { data: declined, error: declineErr } = await supabase
+  const { data: declined, error: declineErr } = await createServiceClient()
     .from('request')
     .update({
       status: 'declined',
@@ -363,7 +368,7 @@ export async function cancelRequest(requestId: string) {
     .single()
   if (!profile) return { error: 'Prófíll ekki fundinn' }
 
-  const { error } = await supabase
+  const { error } = await createServiceClient()
     .from('request')
     .update({ status: 'cancelled', resolved_at: new Date().toISOString() })
     .eq('id', requestId)

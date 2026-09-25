@@ -1,3 +1,4 @@
+import { isAdmin } from '@/lib/admin'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { UppsetningClient } from './uppsetning-client'
@@ -15,7 +16,7 @@ export default async function UppsetningPage() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.email !== process.env.ADMIN_EMAIL) redirect('/stillingar')
+  if (!isAdmin(user)) redirect('/stillingar')
 
   return <UppsetningClient />
 }

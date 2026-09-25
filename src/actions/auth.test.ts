@@ -85,53 +85,22 @@ describe('signupViaInvite', () => {
     expect(result).toEqual({ error: 'Ógildur eða útrunnin boðshlekkur' })
   })
 
-  it('returns error if auth user creation fails', async () => {
-    vi.mocked(verifyInviteToken).mockResolvedValue({ householdId: HH.A })
-
-    const serviceClient = {
-      auth: {
-        admin: {
-          createUser: vi.fn().mockResolvedValue({
-            error: { message: 'Email already in use' },
-          }),
-        },
-      },
-      from: world().client().from,
-    }
-    vi.mocked(createServiceClient).mockReturnValue(
-      serviceClient as unknown as ReturnType<typeof createServiceClient>,
-    )
-
-    const result = await signupViaInvite('valid-token', 'Name', 'test@example.com', 'password')
-    expect(result).toEqual({ error: 'Email already in use' })
-  })
-
-  it('cleans up auth user if profile insert fails', async () => {
-    vi.mocked(verifyInviteToken).mockResolvedValue({ householdId: HH.A })
-
-    const deleteUser = vi.fn().mockResolvedValue({ error: null })
+  it('cleans up the auth user and frees the invite if the profile insert fails', async () => {
     const db = world()
+    db.tables.invite = [
+      { id: 'inv-1', household_id: HH.A, expires_at: '2999-01-01T00:00:00Z', used_at: null },
+    ]
     db.failures['profile.insert'] = 'Profile insert failed'
-
-    const serviceClient = {
-      auth: {
-        admin: {
-          createUser: vi.fn().mockResolvedValue({
-            data: { user: { id: 'new-user-id' } },
-            error: null,
-          }),
-          deleteUser,
-        },
-      },
-      from: db.client().from,
-    }
+    vi.mocked(verifyInviteToken).mockResolvedValue({ householdId: HH.A, inviteId: 'inv-1' })
     vi.mocked(createServiceClient).mockReturnValue(
-      serviceClient as unknown as ReturnType<typeof createServiceClient>,
+      db.client('service') as unknown as ReturnType<typeof createServiceClient>,
     )
 
     const result = await signupViaInvite('valid-token', 'Name', 'test@example.com', 'password')
-    expect(deleteUser).toHaveBeenCalledWith('new-user-id')
-    expect(result.error).toBeTruthy()
+
+    expect(result).toEqual({ error: 'Profile insert failed' })
+    expect(Object.values(db.authEmails)).not.toContain('test@example.com')
+    expect(db.rows('invite')[0].used_at).toBeNull()
   })
 })
 

@@ -1,3 +1,4 @@
+import { isAdmin } from '@/lib/admin'
 import { weekHref, yearFromParam } from '@/lib/rotation-year'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
@@ -26,7 +27,7 @@ export default async function LosaPage({
     .single()
   if (!profile) redirect('/login')
 
-  const canRelease = profile.role === 'head' || profile.email === process.env.ADMIN_EMAIL
+  const canRelease = profile.role === 'head' || isAdmin(user)
   if (!canRelease) redirect(weekHref(year, weekNumber))
 
   return <LosaClient />

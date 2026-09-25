@@ -58,7 +58,7 @@ export async function createSwap(
   const isHead = profile.role === 'head'
   const status = isHead ? 'pending_other_head' : 'pending_own_head'
 
-  const { data: swap, error } = await supabase
+  const { data: swap, error } = await createServiceClient()
     .from('swap_proposal')
     .insert({
       year_id: allocationA.year_id,
@@ -156,7 +156,10 @@ export async function approveSwap(swapId: string) {
       return { error: 'Þú getur ekki samþykkt þessa tillögu' }
     }
 
-    await supabase.from('swap_proposal').update({ status: 'pending_other_head' }).eq('id', swapId)
+    await createServiceClient()
+      .from('swap_proposal')
+      .update({ status: 'pending_other_head' })
+      .eq('id', swapId)
 
     const { data: otherHead } = await supabase
       .from('profile')
@@ -230,12 +233,12 @@ export async function approveSwap(swapId: string) {
 
     if (isFullWeek(daysA, allocA.week_start) && isFullWeek(daysB, allocB.week_start)) {
       // Whole weeks traded: move ownership so the calendar shows the new owner
-      await supabase
+      await createServiceClient()
         .from('week_allocation')
         .update({ household_id: allocB.household_id })
         .eq('id', swap.allocation_a_id)
 
-      await supabase
+      await createServiceClient()
         .from('week_allocation')
         .update({ household_id: allocA.household_id })
         .eq('id', swap.allocation_b_id)
@@ -248,7 +251,7 @@ export async function approveSwap(swapId: string) {
           status: 'claimed' as const,
           claimed_by_household_id: householdId,
         }))
-      const { error: claimErr } = await supabase
+      const { error: claimErr } = await createServiceClient()
         .from('day_release')
         .upsert(
           [
@@ -260,7 +263,7 @@ export async function approveSwap(swapId: string) {
       if (claimErr) return { error: claimErr.message }
     }
 
-    await supabase
+    await createServiceClient()
       .from('swap_proposal')
       .update({ status: 'approved', resolved_at: new Date().toISOString() })
       .eq('id', swapId)
@@ -320,7 +323,7 @@ export async function declineSwap(swapId: string, reason?: string) {
     return { error: 'Þú getur ekki hafnað þessari tillögu' }
   }
 
-  const { data: declined, error: declineErr } = await supabase
+  const { data: declined, error: declineErr } = await createServiceClient()
     .from('swap_proposal')
     .update({
       status: 'declined',
@@ -371,7 +374,7 @@ export async function cancelSwap(swapId: string) {
     .single()
   if (!profile) return { error: 'Prófíll ekki fundinn' }
 
-  const { error } = await supabase
+  const { error } = await createServiceClient()
     .from('swap_proposal')
     .update({ status: 'cancelled', resolved_at: new Date().toISOString() })
     .eq('id', swapId)

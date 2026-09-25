@@ -1,5 +1,6 @@
 import { CalendarViewClient } from '@/components/calendar/calendar-view-client'
 import { ActionBar } from '@/components/ui/action-bar'
+import { isAdmin } from '@/lib/admin'
 import { yearFromParam } from '@/lib/rotation-year'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
@@ -96,7 +97,7 @@ export default async function DagatalPage({
       {!yearRecord && (
         <div className="mx-4 mt-4 rounded-xl bg-stone-50 px-4 py-3 text-sm text-stone-600">
           Dagatal {currentYear} hefur ekki verið sett upp.
-          {profile.email === process.env.ADMIN_EMAIL && (
+          {isAdmin(user) && (
             <>
               {' '}
               <Link

@@ -1,9 +1,9 @@
 'use server'
 
-import { redirect } from 'next/navigation'
+import { verifyInviteToken } from '@/lib/invite'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { verifyInviteToken } from '@/lib/invite'
+import { redirect } from 'next/navigation'
 
 export async function login(email: string, password: string) {
   const supabase = await createClient()
@@ -49,12 +49,29 @@ export async function signupViaInvite(
     .single()
   if (!household) return { error: 'Ógildur boðshlekkur' }
 
+  // Claim the invite atomically: only one sign-up can flip used_at from null
+  const now = new Date().toISOString()
+  const { data: claimed } = await service
+    .from('invite')
+    .update({ used_at: now })
+    .eq('id', payload.inviteId)
+    .eq('household_id', payload.householdId)
+    .is('used_at', null)
+    .gt('expires_at', now)
+    .select('id')
+  if (!claimed?.length) return { error: 'Boðshlekkur hefur þegar verið notaður eða er útrunninn' }
+  const releaseInvite = () =>
+    service.from('invite').update({ used_at: null }).eq('id', payload.inviteId)
+
   const { data: authData, error: authErr } = await service.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
   })
-  if (authErr) return { error: authErr.message }
+  if (authErr) {
+    await releaseInvite()
+    return { error: authErr.message }
+  }
 
   const { error: profileErr } = await service.from('profile').insert({
     id: authData.user.id,
@@ -65,8 +82,11 @@ export async function signupViaInvite(
   })
   if (profileErr) {
     await service.auth.admin.deleteUser(authData.user.id)
+    await releaseInvite()
     return { error: profileErr.message }
   }
+
+  await service.from('invite').update({ used_by: authData.user.id }).eq('id', payload.inviteId)
 
   redirect('/login')
 }

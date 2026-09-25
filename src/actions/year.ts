@@ -1,5 +1,6 @@
 'use server'
 
+import { isAdmin } from '@/lib/admin'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { continueRotation, generateAllocations } from '@/lib/weeks'
@@ -50,8 +51,7 @@ export async function createYear(year: number) {
     .select('email, household:household_id(house_id)')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.email !== process.env.ADMIN_EMAIL)
-    return { error: 'Aðeins stjórnandi getur búið til ár' }
+  if (!profile || !isAdmin(user)) return { error: 'Aðeins stjórnandi getur búið til ár' }
   const houseId = (profile.household as unknown as { house_id: string } | null)?.house_id
   if (!houseId) return { error: 'Heimili ekki fundið' }
 
@@ -78,7 +78,7 @@ export async function createYear(year: number) {
     ? continueRotation(previous as Year, households as Household[])
     : households.map((h) => h.id)
 
-  const { data: created, error: yearErr } = await supabase
+  const { data: created, error: yearErr } = await createServiceClient()
     .from('year')
     .insert({
       house_id: houseId,
@@ -91,9 +91,11 @@ export async function createYear(year: number) {
   if (yearErr || !created) return { error: yearErr?.message ?? 'Ekki tókst að búa til ár' }
 
   const allocations = generateAllocations(created as Year, households as Household[])
-  const { error: allocErr } = await supabase.from('week_allocation').insert(allocations)
+  const { error: allocErr } = await createServiceClient()
+    .from('week_allocation')
+    .insert(allocations)
   if (allocErr) {
-    await supabase.from('year').delete().eq('id', created.id)
+    await createServiceClient().from('year').delete().eq('id', created.id)
     return { error: allocErr.message }
   }
 
@@ -116,8 +118,7 @@ export async function saveRotation(yearId: string, rotationOrder: string[]) {
     .select('email, household_id')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.email !== process.env.ADMIN_EMAIL)
-    return { error: 'Aðeins stjórnandi getur breytt snúningsröð' }
+  if (!profile || !isAdmin(user)) return { error: 'Aðeins stjórnandi getur breytt snúningsröð' }
 
   const { data: yearRecord } = await supabase.from('year').select('*').eq('id', yearId).single()
   if (!yearRecord) return { error: 'Ár ekki fundið' }
@@ -128,7 +129,7 @@ export async function saveRotation(yearId: string, rotationOrder: string[]) {
     .eq('house_id', yearRecord.house_id)
   if (!households) return { error: 'Fjölskyldur ekki fundnar' }
 
-  await supabase.from('allocation_change').insert({
+  await createServiceClient().from('allocation_change').insert({
     year_id: yearId,
     changed_by: user.id,
     change_type: 'rotation_order',
@@ -136,7 +137,7 @@ export async function saveRotation(yearId: string, rotationOrder: string[]) {
     new_value: rotationOrder,
   })
 
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await createServiceClient()
     .from('year')
     .update({ rotation_order: rotationOrder })
     .eq('id', yearId)
@@ -154,7 +155,9 @@ export async function saveRotation(yearId: string, rotationOrder: string[]) {
   const updatedYear: Year = { ...yearRecord, rotation_order: rotationOrder }
   const allocations = generateAllocations(updatedYear, households as Household[])
 
-  const { error: insertErr } = await supabase.from('week_allocation').insert(allocations)
+  const { error: insertErr } = await createServiceClient()
+    .from('week_allocation')
+    .insert(allocations)
   if (insertErr) return { error: insertErr.message }
 
   await notifyAllUsers(supabase, yearRecord.house_id, 'Snúningsröð ' + yearRecord.year + ' uppfærð')
@@ -176,8 +179,7 @@ export async function updateSpringWeek(yearId: string, weekNumber: number | null
     .select('email')
     .eq('id', user.id)
     .single()
-  if (!profile || profile.email !== process.env.ADMIN_EMAIL)
-    return { error: 'Aðeins stjórnandi getur stillt vorsviku' }
+  if (!profile || !isAdmin(user)) return { error: 'Aðeins stjórnandi getur stillt vorsviku' }
 
   const { data: yearRecord } = await supabase.from('year').select('*').eq('id', yearId).single()
   if (!yearRecord) return { error: 'Ár ekki fundið' }
@@ -188,7 +190,7 @@ export async function updateSpringWeek(yearId: string, weekNumber: number | null
     .eq('house_id', yearRecord.house_id)
   if (!households) return { error: 'Fjölskyldur ekki fundnar' }
 
-  await supabase.from('allocation_change').insert({
+  await createServiceClient().from('allocation_change').insert({
     year_id: yearId,
     changed_by: user.id,
     change_type: 'spring_week',
@@ -196,7 +198,10 @@ export async function updateSpringWeek(yearId: string, weekNumber: number | null
     new_value: weekNumber,
   })
 
-  await supabase.from('year').update({ spring_shared_week_number: weekNumber }).eq('id', yearId)
+  await createServiceClient()
+    .from('year')
+    .update({ spring_shared_week_number: weekNumber })
+    .eq('id', yearId)
 
   const updatedYear: Year = { ...yearRecord, spring_shared_week_number: weekNumber }
   const allocations = generateAllocations(updatedYear, households as Household[])

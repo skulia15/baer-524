@@ -37,6 +37,17 @@ describe('createYear', () => {
     expect(db.rows('year')).toHaveLength(1)
   })
 
+  it('ignores a profile email edited to match the admin (auth email decides)', async () => {
+    const db = useDb(world(USER.headB))
+    const headB = db.rows('profile').find((p) => p.id === USER.headB)
+    Object.assign(headB ?? {}, { email: 'a@x.is' })
+
+    const result = await createYear(2027)
+
+    expect(result.error).toBe('Aðeins stjórnandi getur búið til ár')
+    expect(db.rows('year')).toHaveLength(1)
+  })
+
   it('is admin-only', async () => {
     const db = useDb(world(USER.headB))
 

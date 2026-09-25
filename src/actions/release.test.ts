@@ -144,7 +144,7 @@ describe('retractRelease', () => {
       { id: 'dr-2', week_allocation_id: WEEK.a10, date: WEEK10_DAYS[1], status: 'released' },
     ]
     vi.mocked(createClient).mockResolvedValue(db.client() as unknown as MockSupabase)
-    vi.mocked(createServiceClient).mockReturnValue(db.client() as unknown as ServiceClient)
+    vi.mocked(createServiceClient).mockReturnValue(db.client('service') as unknown as ServiceClient)
 
     const result = await retractRelease(['dr-1'])
     expect(result).toEqual({ success: true })

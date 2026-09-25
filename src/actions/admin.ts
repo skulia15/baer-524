@@ -1,8 +1,9 @@
 'use server'
 
+import { isAdmin } from '@/lib/admin'
+import { sendEmail } from '@/lib/email'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { sendEmail } from '@/lib/email'
 import type { Household, Profile } from '@/types/db'
 
 type Result = { success: true } | { error: string }
@@ -14,18 +15,8 @@ async function verifyAdmin(): Promise<{ userId: string } | { error: string }> {
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Notandi ekki innskráður' }
 
-  const { data: profile } = await supabase
-    .from('profile')
-    .select('email')
-    .eq('id', user.id)
-    .single()
-
-  const adminEmail = process.env.ADMIN_EMAIL
-  if (!adminEmail) return { error: 'Admin ekki stilltur' }
-
-  if (profile?.email !== adminEmail) {
-    return { error: 'Ekki heimild' }
-  }
+  if (!process.env.ADMIN_EMAIL) return { error: 'Admin ekki stilltur' }
+  if (!isAdmin(user)) return { error: 'Ekki heimild' }
 
   return { userId: user.id }
 }

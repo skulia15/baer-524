@@ -10,13 +10,24 @@ function appUrl(path: string): string {
   return `${base.replace(/\/$/, '')}${path}`
 }
 
-// Body for notification emails, linking to `path` in the app
+const HTML_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c])
+
+// Body for notification emails, linking to `path` in the app.
+// `message` and `senderMessage` may contain user input (decline reasons, notes).
 export function notificationEmailHtml(
   message: string,
   path: string,
   senderMessage?: string | null,
 ) {
-  return `<p>Bær 524: ${message}</p>${senderMessage ? `<p><em>"${senderMessage}"</em></p>` : ''}<p><a href="${appUrl(path)}">Opna í appi</a></p>`
+  const note = senderMessage ? `<p><em>"${escapeHtml(senderMessage)}"</em></p>` : ''
+  return `<p>Bær 524: ${escapeHtml(message)}</p>${note}<p><a href="${escapeHtml(appUrl(path))}">Opna í appi</a></p>`
 }
 
 export async function sendEmail(to: string, subject: string, html: string) {

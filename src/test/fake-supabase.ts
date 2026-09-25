@@ -78,6 +78,7 @@ class Query implements PromiseLike<{ data: unknown; error: unknown; count?: numb
   constructor(
     private db: FakeDb,
     private table: string,
+    private readOnly = false,
   ) {}
 
   select(cols = '*', opts?: { count?: string; head?: boolean }) {
@@ -117,6 +118,10 @@ class Query implements PromiseLike<{ data: unknown; error: unknown; count?: numb
     this.filters.push((r) => vs.some((v) => sameValue(r[col], v)))
     return this
   }
+  gt(col: string, v: unknown) {
+    this.filters.push((r) => String(r[col]) > String(v))
+    return this
+  }
   is(col: string, v: unknown) {
     this.filters.push((r) => (r[col] ?? null) === v)
     return this
@@ -149,6 +154,14 @@ class Query implements PromiseLike<{ data: unknown; error: unknown; count?: numb
   private run(): { data: unknown; error: unknown; count?: number } {
     const failure = this.db.failures[`${this.table}.${this.op}`]
     if (failure) return { data: null, error: { message: failure } }
+
+    // Mimic RLS without a write policy: inserts are rejected, updates/deletes match nothing
+    if (this.readOnly && this.op !== 'select') {
+      if (this.op === 'insert' || this.op === 'upsert') {
+        return { data: null, error: { message: 'new row violates row-level security policy' } }
+      }
+      this.filters.push(() => false)
+    }
 
     let affected: Row[]
     const all = this.rows()
@@ -225,20 +238,41 @@ export class FakeDb {
   /** `${table}.${op}` → error message, to simulate failures */
   failures: Record<string, string> = {}
   userId: string | null = null
+  /** auth.users emails by user id — independent of profile.email */
+  authEmails: Record<string, string> = {}
+  /** Tables RLS makes read-only for the user client; the service client bypasses RLS */
+  clientReadOnly = new Set<string>()
 
   constructor(seed: Tables = {}) {
     this.tables = structuredClone(seed)
   }
 
-  client() {
+  client(role: 'user' | 'service' = 'user') {
     return {
       auth: {
         getUser: async () => ({
-          data: { user: this.userId ? { id: this.userId } : null },
+          data: {
+            user: this.userId ? { id: this.userId, email: this.authEmails[this.userId] } : null,
+          },
           error: null,
         }),
+        admin: {
+          createUser: async ({ email }: { email: string }) => {
+            if (Object.values(this.authEmails).includes(email)) {
+              return { data: { user: null }, error: { message: 'User already registered' } }
+            }
+            const id = newId()
+            this.authEmails[id] = email
+            return { data: { user: { id, email } }, error: null }
+          },
+          deleteUser: async (id: string) => {
+            delete this.authEmails[id]
+            return { error: null }
+          },
+        },
       },
-      from: (table: string) => new Query(this, table),
+      from: (table: string) =>
+        new Query(this, table, role === 'user' && this.clientReadOnly.has(table)),
     }
   }
 

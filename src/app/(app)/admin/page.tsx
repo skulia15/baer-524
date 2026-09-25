@@ -1,4 +1,5 @@
 import type { ProfileWithHousehold } from '@/actions/admin'
+import { isAdmin } from '@/lib/admin'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { Household } from '@/types/db'
@@ -18,7 +19,7 @@ export default async function AdminPage() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.email !== process.env.ADMIN_EMAIL) redirect('/dagatal')
+  if (!isAdmin(user)) redirect('/dagatal')
 
   const houseId = (profile?.household as unknown as { house_id: string } | null)?.house_id
 

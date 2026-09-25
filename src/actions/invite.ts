@@ -1,15 +1,31 @@
 'use server'
 
-import { signInviteToken } from '@/lib/invite'
+import { isAdmin } from '@/lib/admin'
+import { INVITE_TTL_DAYS, signInviteToken } from '@/lib/invite'
 import { createClient } from '@/lib/supabase/server'
-import { headers } from 'next/headers'
+import { createServiceClient } from '@/lib/supabase/service'
 
-async function buildInviteUrl(householdId: string): Promise<string> {
-  const token = await signInviteToken(householdId)
-  const headersList = await headers()
-  const host = headersList.get('host') ?? 'localhost:3000'
-  const protocol = host.startsWith('localhost') ? 'http' : 'https'
-  return `${protocol}://${host}/signup?token=${token}`
+// Records a single-use invite and returns its sign-up link. The base URL comes from
+// config, never from the request's Host header, so links can't point elsewhere.
+async function createInviteUrl(
+  householdId: string,
+  createdBy: string,
+): Promise<{ url?: string; error?: string }> {
+  const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000)
+  const { data: invite, error } = await createServiceClient()
+    .from('invite')
+    .insert({
+      household_id: householdId,
+      created_by: createdBy,
+      expires_at: expiresAt.toISOString(),
+    })
+    .select('id')
+    .single()
+  if (error || !invite) return { error: error?.message ?? 'Ekki tókst að búa til boðshlekk' }
+
+  const token = await signInviteToken(householdId, invite.id)
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+  return { url: `${base}/signup?token=${token}` }
 }
 
 export async function adminGenerateInviteLink(
@@ -21,16 +37,10 @@ export async function adminGenerateInviteLink(
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Ekki innskráður' }
 
-  const { data: profile } = await supabase
-    .from('profile')
-    .select('email')
-    .eq('id', user.id)
-    .single()
-  if (profile?.email !== process.env.ADMIN_EMAIL)
+  if (!isAdmin(user))
     return { error: 'Aðeins admin getur búið til boðshlekk fyrir aðrar fjölskyldur' }
 
-  const url = await buildInviteUrl(householdId)
-  return { url }
+  return createInviteUrl(householdId, user.id)
 }
 
 export async function generateInviteLink(
@@ -45,15 +55,13 @@ export async function generateInviteLink(
 
   const { data: profile } = await supabase
     .from('profile')
-    .select('role, household_id, email')
+    .select('role, household_id')
     .eq('id', user.id)
     .single()
-  const isAdmin = profile?.email === process.env.ADMIN_EMAIL
-  if (!profile || (profile.role !== 'head' && !isAdmin))
+  if (!profile || (profile.role !== 'head' && !isAdmin(user)))
     return { error: 'Aðeins eigendur geta búið til boðshlekk' }
   if (profile.household_id !== householdId)
     return { error: 'Þú getur aðeins boðið í þína fjölskyldu' }
 
-  const url = await buildInviteUrl(householdId)
-  return { url }
+  return createInviteUrl(householdId, user.id)
 }
