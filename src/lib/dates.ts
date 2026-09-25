@@ -1,4 +1,4 @@
-import { isYesterday, isToday } from 'date-fns'
+import { isToday, isYesterday } from 'date-fns'
 
 const IS_DAY_ABBR = ['sun', 'mán', 'þri', 'mið', 'fim', 'fös', 'lau']
 const IS_MONTH_ABBR = [
@@ -22,6 +22,21 @@ function isDay(date: Date): string {
 
 function isMonth(date: Date): string {
   return IS_MONTH_ABBR[date.getMonth()]
+}
+
+// The 7 'yyyy-MM-dd' dates of a week starting on `weekStart` ('yyyy-MM-dd').
+// Pure calendar arithmetic in UTC, so the result never depends on the local timezone.
+export function weekDates(weekStart: string): string[] {
+  const [y, m, d] = weekStart.split('-').map(Number)
+  return Array.from({ length: 7 }, (_, i) =>
+    new Date(Date.UTC(y, m - 1, d + i)).toISOString().slice(0, 10),
+  )
+}
+
+// True when `days` is non-empty and every day falls inside the week starting on `weekStart`
+export function areDaysInWeek(days: string[], weekStart: string): boolean {
+  const week = weekDates(weekStart)
+  return days.length > 0 && days.every((d) => week.includes(d))
 }
 
 // "fim 4. jún – mið 10. jún"

@@ -1,5 +1,6 @@
 'use client'
 
+import { weekHref } from '@/lib/rotation-year'
 import type { DayRelease, Household, WeekAllocation } from '@/types/db'
 import type { Holiday } from 'fridagar'
 import Link from 'next/link'
@@ -143,7 +144,7 @@ export function MonthGrid({
           const accentColor = household?.color ?? (isShared ? '#9ca3af' : null)
 
           return (
-            <Link key={ds} href={allocation ? `/dagatal/vika/${allocation.week_number}` : '#'}>
+            <Link key={ds} href={allocation ? weekHref(year, allocation.week_number) : '#'}>
               <div
                 className={`relative min-h-[52px] bg-white p-1 flex flex-col ${isPast ? 'opacity-50' : ''}`}
                 style={{ backgroundColor: bgColor, backgroundImage: bgImage }}
@@ -160,9 +161,7 @@ export function MonthGrid({
                 <div className="flex items-center justify-center">
                   <span
                     className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${
-                      isToday
-                        ? 'bg-stone-900 text-white'
-                        : 'text-stone-900'
+                      isToday ? 'bg-stone-900 text-white' : 'text-stone-900'
                     }`}
                   >
                     {day}
@@ -196,7 +195,10 @@ export function MonthGrid({
                 {/* Claimed indicator label */}
                 {claimedByHousehold && (
                   <div className="mt-auto pt-0.5 text-center">
-                    <span className="text-[8px] font-semibold leading-none" style={{ color: claimedByHousehold.color }}>
+                    <span
+                      className="text-[8px] font-semibold leading-none"
+                      style={{ color: claimedByHousehold.color }}
+                    >
                       tekið
                     </span>
                   </div>

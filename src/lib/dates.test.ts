@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { formatWeekRange, formatDay, formatRelativeTime } from './dates'
+import { describe, expect, it } from 'vitest'
+import { formatDay, formatRelativeTime, formatWeekRange, weekDates } from './dates'
 
 // Use local midnight to avoid UTC timezone parsing issues
 const date = (year: number, month: number, day: number) => new Date(year, month - 1, day)
@@ -28,7 +28,20 @@ describe('formatWeekRange', () => {
   })
 
   it('uses correct Icelandic month abbreviations for all months', () => {
-    const monthAbbr = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des']
+    const monthAbbr = [
+      'jan',
+      'feb',
+      'mar',
+      'apr',
+      'maí',
+      'jún',
+      'júl',
+      'ágú',
+      'sep',
+      'okt',
+      'nóv',
+      'des',
+    ]
     for (let m = 1; m <= 12; m++) {
       // Use 1st of each month (any weekday is fine for this test)
       const result = formatWeekRange(date(2026, m, 1), date(2026, m, 7))
@@ -95,5 +108,19 @@ describe('formatRelativeTime', () => {
     const d = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
     const result = formatRelativeTime(d.toISOString())
     expect(result).toBe('Fyrir 3 dögum')
+  })
+})
+
+describe('weekDates', () => {
+  it('returns the 7 ISO dates of a Thu–Wed week, crossing month and year ends', () => {
+    expect(weekDates('2026-12-31')).toEqual([
+      '2026-12-31',
+      '2027-01-01',
+      '2027-01-02',
+      '2027-01-03',
+      '2027-01-04',
+      '2027-01-05',
+      '2027-01-06',
+    ])
   })
 })

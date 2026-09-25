@@ -1,5 +1,6 @@
 import { getHouseholdStyle } from '@/lib/colors'
 import { formatDay, formatWeekRange } from '@/lib/dates'
+import { weekHref } from '@/lib/rotation-year'
 import type { DayPlan, DayRelease, Household, Profile, WeekAllocation } from '@/types/db'
 import { addDays } from 'date-fns'
 import {
@@ -30,6 +31,7 @@ interface WeekDetailViewProps {
   prevWeek: number | null
   nextWeek: number | null
   dayTransfers: Record<string, DayTransfer>
+  year: number
 }
 
 export function WeekDetailView({
@@ -41,6 +43,7 @@ export function WeekDetailView({
   prevWeek,
   nextWeek,
   dayTransfers,
+  year,
 }: WeekDetailViewProps) {
   const today = new Date().toISOString().split('T')[0]
   const isPast = allocation.week_end < today
@@ -61,22 +64,24 @@ export function WeekDetailView({
   )
   const plannedDays = new Set(plans.map((p) => p.date))
 
-  const barStyle =
-    household
-      ? getHouseholdStyle(household.color)
-      : { backgroundColor: '#9ca3af', color: '#ffffff' }
+  const barStyle = household
+    ? getHouseholdStyle(household.color)
+    : { backgroundColor: '#9ca3af', color: '#ffffff' }
 
   return (
     <div>
       <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
-        <Link href="/dagatal" className="flex items-center gap-1 text-sm text-green-700">
+        <Link
+          href={`/dagatal?ar=${year}`}
+          className="flex items-center gap-1 text-sm text-green-700"
+        >
           <ArrowLeft className="h-4 w-4" />
           Dagatal
         </Link>
         <div className="flex gap-1">
           {prevWeek && (
             <Link
-              href={`/dagatal/vika/${prevWeek}`}
+              href={weekHref(year, prevWeek)}
               className="rounded-lg p-1.5 text-green-700 transition-colors hover:bg-stone-100"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -84,7 +89,7 @@ export function WeekDetailView({
           )}
           {nextWeek && (
             <Link
-              href={`/dagatal/vika/${nextWeek}`}
+              href={weekHref(year, nextWeek)}
               className="rounded-lg p-1.5 text-green-700 transition-colors hover:bg-stone-100"
             >
               <ChevronRight className="h-4 w-4" />
@@ -170,7 +175,7 @@ export function WeekDetailView({
           {isOwn && (
             <>
               <Link
-                href={`/dagatal/vika/${allocation.week_number}/stadfesta`}
+                href={weekHref(year, allocation.week_number, 'stadfesta')}
                 className="flex items-center justify-center gap-2 rounded-xl bg-green-700 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-green-800"
               >
                 <CalendarCheck className="h-4 w-4" />
@@ -178,7 +183,7 @@ export function WeekDetailView({
               </Link>
               {canRelease && (
                 <Link
-                  href={`/dagatal/vika/${allocation.week_number}/losa`}
+                  href={weekHref(year, allocation.week_number, 'losa')}
                   className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
                 >
                   <CalendarX className="h-4 w-4" />
@@ -186,7 +191,7 @@ export function WeekDetailView({
                 </Link>
               )}
               <Link
-                href={`/dagatal/vika/${allocation.week_number}/skipti`}
+                href={weekHref(year, allocation.week_number, 'skipti')}
                 className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
               >
                 <ArrowLeftRight className="h-4 w-4" />
@@ -197,14 +202,14 @@ export function WeekDetailView({
           {!isOwn && (
             <>
               <Link
-                href={`/dagatal/vika/${allocation.week_number}/beidni`}
+                href={weekHref(year, allocation.week_number, 'beidni')}
                 className="flex items-center justify-center gap-2 rounded-xl bg-green-700 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-green-800"
               >
                 <CalendarPlus className="h-4 w-4" />
                 Óska eftir dögum
               </Link>
               <Link
-                href={`/dagatal/vika/${allocation.week_number}/skipti`}
+                href={weekHref(year, allocation.week_number, 'skipti')}
                 className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
               >
                 <ArrowLeftRight className="h-4 w-4" />

@@ -121,11 +121,16 @@ export function CalendarView({
               const swap = approvedSwaps.find(
                 (s) => s.allocation_a_id === allocation.id || s.allocation_b_id === allocation.id,
               )
-              const swappedFrom = swap
+              const originalOwnerId = swap
                 ? swap.allocation_a_id === allocation.id
-                  ? (householdMap.get(swap.household_a_id) ?? null)
-                  : (householdMap.get(swap.household_b_id) ?? null)
+                  ? swap.household_a_id
+                  : swap.household_b_id
                 : null
+              // Partial swaps keep ownership (days show as claimed); only whole-week swaps move it
+              const swappedFrom =
+                originalOwnerId && originalOwnerId !== allocation.household_id
+                  ? (householdMap.get(originalOwnerId) ?? null)
+                  : null
 
               const claimedHouseholdIds = [
                 ...new Set(
@@ -150,6 +155,7 @@ export function CalendarView({
                   isCurrentWeek={isCurrent}
                   swappedFrom={swappedFrom}
                   claimedByHousehold={claimedByHousehold}
+                  year={year}
                 />
               )
             })}

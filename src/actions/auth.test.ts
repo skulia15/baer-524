@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }))
@@ -7,11 +7,12 @@ vi.mock('@/lib/invite', () => ({
   verifyInviteToken: vi.fn(),
 }))
 
+import { verifyInviteToken } from '@/lib/invite'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { verifyInviteToken } from '@/lib/invite'
+import { HH, world } from '@/test/world'
 import { redirect } from 'next/navigation'
-import { login, setPassword, signupViaInvite, logout } from './auth'
+import { login, logout, setPassword, signupViaInvite } from './auth'
 
 type MockSupabase = ReturnType<typeof createClient> extends Promise<infer T> ? T : never
 
@@ -30,7 +31,7 @@ describe('login', () => {
     expect(result).toEqual({ error: 'Invalid login credentials' })
   })
 
-  it('redirects on successful login', async () => {
+  it('returns success on successful login (client navigates)', async () => {
     const supabase = {
       auth: {
         signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
@@ -38,13 +39,8 @@ describe('login', () => {
     }
     vi.mocked(createClient).mockResolvedValue(supabase as unknown as MockSupabase)
 
-    // redirect() throws in Next.js so we catch the error
-    try {
-      await login('test@example.com', 'password123')
-    } catch {
-      // redirect throws in Next.js
-    }
-    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/dagatal')
+    const result = await login('test@example.com', 'password123')
+    expect(result).toEqual({ success: true })
   })
 })
 
@@ -90,7 +86,7 @@ describe('signupViaInvite', () => {
   })
 
   it('returns error if auth user creation fails', async () => {
-    vi.mocked(verifyInviteToken).mockResolvedValue({ householdId: 'hh-1' })
+    vi.mocked(verifyInviteToken).mockResolvedValue({ householdId: HH.A })
 
     const serviceClient = {
       auth: {
@@ -100,7 +96,7 @@ describe('signupViaInvite', () => {
           }),
         },
       },
-      from: vi.fn(),
+      from: world().client().from,
     }
     vi.mocked(createServiceClient).mockReturnValue(
       serviceClient as unknown as ReturnType<typeof createServiceClient>,
@@ -111,15 +107,11 @@ describe('signupViaInvite', () => {
   })
 
   it('cleans up auth user if profile insert fails', async () => {
-    vi.mocked(verifyInviteToken).mockResolvedValue({ householdId: 'hh-1' })
+    vi.mocked(verifyInviteToken).mockResolvedValue({ householdId: HH.A })
 
     const deleteUser = vi.fn().mockResolvedValue({ error: null })
-    // Supabase insert() is awaited directly (no .single() call)
-    const insertChain = {
-      then: undefined as unknown, // not a Promise itself
-    }
-    const insertMock = vi.fn().mockResolvedValue({ error: { message: 'Profile insert failed' } })
-    const fromChain = { insert: insertMock }
+    const db = world()
+    db.failures['profile.insert'] = 'Profile insert failed'
 
     const serviceClient = {
       auth: {
@@ -131,7 +123,7 @@ describe('signupViaInvite', () => {
           deleteUser,
         },
       },
-      from: vi.fn().mockReturnValue(fromChain),
+      from: db.client().from,
     }
     vi.mocked(createServiceClient).mockReturnValue(
       serviceClient as unknown as ReturnType<typeof createServiceClient>,

@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
+export const NOTIFICATIONS_READ_EVENT = 'notifications-read'
 
 export function useUnreadCount() {
   const [count, setCount] = useState(0)
@@ -20,7 +22,11 @@ export function useUnreadCount() {
 
     fetchCount()
     const interval = setInterval(fetchCount, 30000)
-    return () => clearInterval(interval)
+    window.addEventListener(NOTIFICATIONS_READ_EVENT, fetchCount)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener(NOTIFICATIONS_READ_EVENT, fetchCount)
+    }
   }, [])
 
   return count

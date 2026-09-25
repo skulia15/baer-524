@@ -1,22 +1,14 @@
-import { markAllRead } from '@/actions/notifications'
 import { formatRelativeTime } from '@/lib/dates'
+import { type WeekRef, notificationHref } from '@/lib/notification-href'
 import { createClient } from '@/lib/supabase/server'
-import type { Notification } from '@/types/db'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { MarkAllRead } from './mark-all-read'
 
 const STATUS_LABELS: Record<string, string> = {
   pending_own_head: 'Bíður samþykkis eigin eiganda',
   pending_releasing_head: 'Bíður samþykkis losandi fjölskyldu',
   pending_other_head: 'Bíður samþykkis',
-}
-
-function getNotifHref(n: Notification): string {
-  if (n.reference_type === 'request' && n.reference_id)
-    return `/tilkynningar/beidni/${n.reference_id}`
-  if (n.reference_type === 'swap_proposal' && n.reference_id)
-    return `/tilkynningar/skipti/${n.reference_id}`
-  return '/tilkynningar'
 }
 
 export default async function TilkynningarPage() {
@@ -55,10 +47,26 @@ export default async function TilkynningarPage() {
       : { data: [] },
   ])
 
-  await markAllRead()
+  // Release notifications reference a week_allocation; resolve week number + year for links
+  const weekIds = (notifications ?? [])
+    .filter((n) => n.reference_type === 'week_allocation' && n.reference_id)
+    .map((n) => n.reference_id as string)
+  const { data: weekRows } = weekIds.length
+    ? await supabase
+        .from('week_allocation')
+        .select('id, week_number, year:year_id(year)')
+        .in('id', weekIds)
+    : { data: [] }
+  const weeks = new Map<string, WeekRef>(
+    (weekRows ?? []).map((w) => [
+      w.id,
+      { week_number: w.week_number, year: (w.year as unknown as { year: number }).year },
+    ]),
+  )
 
   return (
     <div>
+      <MarkAllRead />
       <div className="border-b border-stone-100 px-4 py-3">
         <h1 className="font-semibold text-stone-900">Tilkynningar</h1>
       </div>
@@ -70,7 +78,10 @@ export default async function TilkynningarPage() {
           </p>
           <div className="divide-y divide-stone-100">
             {(myRequests ?? []).map((r) => {
-              const alloc = r.allocation as unknown as { week_number: number; household: { name: string } | null } | null
+              const alloc = r.allocation as unknown as {
+                week_number: number
+                household: { name: string } | null
+              } | null
               return (
                 <Link key={r.id} href={`/tilkynningar/beidni/${r.id}`}>
                   <div className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-stone-50">
@@ -145,11 +156,13 @@ export default async function TilkynningarPage() {
         </p>
       )}
       <div className="divide-y divide-stone-100">
-        {(notifications ?? []).length === 0 && (myRequests ?? []).length === 0 && (mySwaps ?? []).length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-stone-400">Engar tilkynningar</p>
-        )}
+        {(notifications ?? []).length === 0 &&
+          (myRequests ?? []).length === 0 &&
+          (mySwaps ?? []).length === 0 && (
+            <p className="px-4 py-8 text-center text-sm text-stone-400">Engar tilkynningar</p>
+          )}
         {(notifications ?? []).map((n) => (
-          <Link key={n.id} href={getNotifHref(n)}>
+          <Link key={n.id} href={notificationHref(n, weeks)}>
             <div
               className={`flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-stone-50 ${n.read ? '' : 'bg-green-50'}`}
             >

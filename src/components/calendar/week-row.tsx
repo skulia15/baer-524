@@ -2,6 +2,7 @@
 
 import { getHouseholdFadedStyle, getHouseholdSharedStyle, getHouseholdStyle } from '@/lib/colors'
 import { formatWeekRange } from '@/lib/dates'
+import { weekHref } from '@/lib/rotation-year'
 import type { DayRelease, Household, WeekAllocation } from '@/types/db'
 import Link from 'next/link'
 
@@ -14,6 +15,7 @@ interface WeekRowProps {
   isCurrentWeek: boolean
   swappedFrom?: Household | null
   claimedByHousehold?: Household | null
+  year: number
 }
 
 function darkenColor(hex: string): string {
@@ -33,6 +35,7 @@ export function WeekRow({
   isCurrentWeek,
   swappedFrom = null,
   claimedByHousehold = null,
+  year,
 }: WeekRowProps) {
   const availableCount = releases.filter((r) => r.status === 'released').length
   const claimedCount = releases.filter((r) => r.status === 'claimed').length
@@ -41,13 +44,17 @@ export function WeekRow({
   const hasAvailable = availableCount > 0
   const isShared = allocation.type !== 'household'
 
-  const sharedLabel =
-    allocation.type === 'shared_verslunarmannahelgi' ? 'Versló vika' : 'Vinnuvika'
+  const sharedLabel = allocation.type === 'shared_verslunarmannahelgi' ? 'Versló vika' : 'Vinnuvika'
 
   const barStyle = isShared
     ? household
       ? getHouseholdSharedStyle(household.color)
-      : { background: 'repeating-linear-gradient(-45deg, rgba(156,163,175,0.18), rgba(156,163,175,0.18) 10px, rgba(156,163,175,0.06) 10px, rgba(156,163,175,0.06) 14px)', backgroundColor: '#ffffff', color: '#1c1917' }
+      : {
+          background:
+            'repeating-linear-gradient(-45deg, rgba(156,163,175,0.18), rgba(156,163,175,0.18) 10px, rgba(156,163,175,0.06) 10px, rgba(156,163,175,0.06) 14px)',
+          backgroundColor: '#ffffff',
+          color: '#1c1917',
+        }
     : isOwn && isFullyReleased && household
       ? getHouseholdFadedStyle(household.color)
       : !isOwn && hasAvailable && household
@@ -63,7 +70,7 @@ export function WeekRow({
     : (household?.name ?? '—')
 
   return (
-    <Link href={`/dagatal/vika/${allocation.week_number}`}>
+    <Link href={weekHref(year, allocation.week_number)}>
       <div
         id={`week-${allocation.week_number}`}
         className={`mb-1 cursor-pointer ${isPast ? 'opacity-50' : ''}`}

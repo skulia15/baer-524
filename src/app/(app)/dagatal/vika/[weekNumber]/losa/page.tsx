@@ -1,13 +1,17 @@
+import { weekHref, yearFromParam } from '@/lib/rotation-year'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { LosaClient } from './losa-client'
 
 export default async function LosaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ weekNumber: string }>
+  searchParams: Promise<{ ar?: string }>
 }) {
   const { weekNumber } = await params
+  const year = yearFromParam((await searchParams).ar)
   const supabase = await createClient()
 
   const {
@@ -23,7 +27,7 @@ export default async function LosaPage({
   if (!profile) redirect('/login')
 
   const canRelease = profile.role === 'head' || profile.email === process.env.ADMIN_EMAIL
-  if (!canRelease) redirect(`/dagatal/vika/${weekNumber}`)
+  if (!canRelease) redirect(weekHref(year, weekNumber))
 
   return <LosaClient />
 }

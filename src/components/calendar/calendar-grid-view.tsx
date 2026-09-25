@@ -49,24 +49,29 @@ export function CalendarGridView({
 
   return (
     <div className="px-3 pb-20 pt-2">
-      {Array.from({ length: 12 }, (_, i) => i + 1).filter((month) => {
-        const currentYear = new Date().getFullYear()
-        const currentMonth = new Date().getMonth() + 1
-        return year > currentYear || (year === currentYear && month >= currentMonth)
-      }).map((month) => (
-        <MonthGrid
-          key={month}
-          year={year}
-          month={month}
-          allocations={allocations}
-          releases={releases}
-          householdMap={householdMap}
-          currentHouseholdId={currentHouseholdId}
-          holidayMap={holidayMap}
-          todayStr={todayStr}
-          swappedAllocIds={swappedAllocIds}
-        />
-      ))}
+      {Array.from({ length: 12 }, (_, i) => i + 1)
+        .filter((month) => {
+          // Hide months that are over. December stays while the year's last week
+          // (which can run into January) is ongoing.
+          const lastWeekEnd = allocations.at(-1)?.week_end ?? ''
+          const monthEnd = `${year}-${String(month).padStart(2, '0')}-31`
+          const end = month === 12 && lastWeekEnd > monthEnd ? lastWeekEnd : monthEnd
+          return end >= todayStr
+        })
+        .map((month) => (
+          <MonthGrid
+            key={month}
+            year={year}
+            month={month}
+            allocations={allocations}
+            releases={releases}
+            householdMap={householdMap}
+            currentHouseholdId={currentHouseholdId}
+            holidayMap={holidayMap}
+            todayStr={todayStr}
+            swappedAllocIds={swappedAllocIds}
+          />
+        ))}
     </div>
   )
 }

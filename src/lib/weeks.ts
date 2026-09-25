@@ -1,5 +1,5 @@
-import { addDays, getDay, startOfYear, getYear, format } from 'date-fns'
-import type { WeekAllocation, Year, Household } from '@/types/db'
+import type { Household, WeekAllocation, Year } from '@/types/db'
+import { addDays, format, getDay, getYear, startOfYear } from 'date-fns'
 
 // Spring/work week: attributed to the household whose rotation slot it falls on.
 // Rotation advances (the household sacrifices their regular slot).
@@ -60,6 +60,15 @@ export function findVerslunarmannahelgiWeek(weeks: Week[]): number {
   return -1
 }
 
+// Rotation order for the following year: starts with the household after the one
+// owning the last owned week of `yearRecord`, so the rotation carries on unbroken.
+export function continueRotation(yearRecord: Year, households: Household[]): string[] {
+  const order = yearRecord.rotation_order
+  const lastOwner = generateAllocations(yearRecord, households).findLast((a) => a.household_id)
+  const start = lastOwner ? (order.indexOf(lastOwner.household_id as string) + 1) % order.length : 0
+  return [...order.slice(start), ...order.slice(0, start)]
+}
+
 export function generateAllocations(
   yearRecord: Year,
   households: Household[],
@@ -80,7 +89,8 @@ export function generateAllocations(
 
     if (week.week_number === verslunarWeekNum) {
       if (VERSLUNAR_WEEK_HAS_OWNER) {
-        const householdId = yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
+        const householdId =
+          yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
         rotationIndex++ // household sacrifices their slot
         return { ...base, type: 'shared_verslunarmannahelgi' as const, household_id: householdId }
       }
@@ -89,15 +99,15 @@ export function generateAllocations(
     }
     if (springWeekNum && week.week_number === springWeekNum) {
       if (SPRING_WEEK_HAS_OWNER) {
-        const householdId = yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
+        const householdId =
+          yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
         rotationIndex++ // household sacrifices their slot
         return { ...base, type: 'shared_spring' as const, household_id: householdId }
       }
       return { ...base, type: 'shared_spring' as const, household_id: null }
     }
 
-    const householdId =
-      yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
+    const householdId = yearRecord.rotation_order[rotationIndex % yearRecord.rotation_order.length]
     rotationIndex++
     return { ...base, type: 'household' as const, household_id: householdId }
   })

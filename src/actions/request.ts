@@ -1,13 +1,11 @@
 'use server'
 
-import { sendEmail } from '@/lib/email'
+import { notificationEmailHtml, sendEmail } from '@/lib/email'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
-const APP_URL = 'https://baer524.vercel.app/dagatal'
-
-function emailHtml(message: string, senderMessage?: string | null) {
-  return `<p>Bær 524: ${message}</p>${senderMessage ? `<p><em>"${senderMessage}"</em></p>` : ''}<p><a href="${APP_URL}">Opna app</a></p>`
+function emailHtml(requestId: string, message: string, senderMessage?: string | null) {
+  return notificationEmailHtml(message, `/tilkynningar/beidni/${requestId}`, senderMessage)
 }
 
 export async function createRequest(
@@ -35,6 +33,19 @@ export async function createRequest(
     .eq('id', targetAllocationId)
     .single()
   if (!allocation) return { error: 'Vika ekki fundin' }
+
+  if (allocation.household_id === profile.household_id) return { error: 'Þetta er þín vika' }
+  if (requestedDays.length === 0) return { error: 'Veldu að minnsta kosti einn dag' }
+
+  const { data: releasedDays } = await supabase
+    .from('day_release')
+    .select('date')
+    .eq('week_allocation_id', targetAllocationId)
+    .eq('status', 'released')
+    .in('date', requestedDays)
+  if (new Set((releasedDays ?? []).map((r) => r.date)).size !== new Set(requestedDays).size) {
+    return { error: 'Einn eða fleiri dagar eru ekki lausir' }
+  }
 
   const isHead = profile.role === 'head'
   const status = isHead ? 'pending_releasing_head' : 'pending_own_head'
@@ -74,7 +85,11 @@ export async function createRequest(
           message,
           read: false,
         })
-      void sendEmail(releasingHead.email, 'Beiðni um daga', emailHtml(message))
+      void sendEmail(
+        releasingHead.email,
+        'Beiðni um daga',
+        emailHtml(request.id, message, senderMessage),
+      )
     }
   } else {
     const { data: ownHead } = await supabase
@@ -99,7 +114,7 @@ export async function createRequest(
       void sendEmail(
         ownHead.email,
         'Fjölskyldumeðlimur bíður samþykkis',
-        emailHtml(message, senderMessage),
+        emailHtml(request.id, message, senderMessage),
       )
     }
   }
@@ -166,7 +181,7 @@ export async function approveRequest(requestId: string) {
       void sendEmail(
         releasingHead.email,
         'Beiðni um daga',
-        emailHtml(message, request.sender_message),
+        emailHtml(requestId, message, request.sender_message),
       )
     }
 
@@ -211,6 +226,7 @@ export async function approveRequest(requestId: string) {
       .select('id, created_by')
       .eq('target_week_allocation_id', request.target_week_allocation_id)
       .in('status', ['pending_own_head', 'pending_releasing_head'])
+      .overlaps('requested_days', request.requested_days)
       .neq('id', requestId)
 
     if (conflicting && conflicting.length > 0) {
@@ -254,7 +270,8 @@ export async function approveRequest(requestId: string) {
       .select('email')
       .eq('id', request.created_by)
       .single()
-    if (creator) void sendEmail(creator.email, 'Beiðni þín samþykkt', emailHtml(approveMessage))
+    if (creator)
+      void sendEmail(creator.email, 'Beiðni þín samþykkt', emailHtml(requestId, approveMessage))
 
     return { success: true }
   }
@@ -295,7 +312,7 @@ export async function declineRequest(requestId: string, reason?: string) {
     return { error: 'Þú getur ekki hafnað þessari beiðni' }
   }
 
-  await supabase
+  const { data: declined, error: declineErr } = await supabase
     .from('request')
     .update({
       status: 'declined',
@@ -304,6 +321,9 @@ export async function declineRequest(requestId: string, reason?: string) {
     })
     .eq('id', requestId)
     .in('status', ['pending_own_head', 'pending_releasing_head'])
+    .select('id')
+  if (declineErr) return { error: declineErr.message }
+  if (!declined?.length) return { error: 'Beiðni er ekki í bíðstöðu' }
 
   const declineMessage = reason ? `Beiðni hafnað: ${reason}` : 'Beiðni hafnað'
   await createServiceClient()
@@ -322,7 +342,8 @@ export async function declineRequest(requestId: string, reason?: string) {
     .select('email')
     .eq('id', request.created_by)
     .single()
-  if (creator) void sendEmail(creator.email, 'Beiðni þín hafnað', emailHtml(declineMessage))
+  if (creator)
+    void sendEmail(creator.email, 'Beiðni þín hafnað', emailHtml(requestId, declineMessage))
 
   return { success: true }
 }

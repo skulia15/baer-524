@@ -1,18 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { DayPicker } from '@/components/forms/day-picker'
 import { createSwap } from '@/actions/swap'
+import { DayPicker } from '@/components/forms/day-picker'
 import { useBanner } from '@/hooks/use-banner'
+import { weekDates } from '@/lib/dates'
+import { weekHref, yearFromParam } from '@/lib/rotation-year'
 import { createClient } from '@/lib/supabase/client'
-import { addDays } from 'date-fns'
-import type { WeekAllocation, Household } from '@/types/db'
+import type { Household, WeekAllocation } from '@/types/db'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 type AllocWithHousehold = WeekAllocation & { household: Household }
 
 export default function SkiptiPage() {
   const { weekNumber } = useParams<{ weekNumber: string }>()
+  const year = yearFromParam(useSearchParams().get('ar'))
   const router = useRouter()
   const { showBanner } = useBanner()
 
@@ -41,7 +43,6 @@ export default function SkiptiPage() {
         .single()
       if (!profile) return
 
-      const year = new Date().getFullYear()
       const { data: yr } = await supabase.from('year').select('id').eq('year', year).single()
       if (!yr) return
 
@@ -73,17 +74,13 @@ export default function SkiptiPage() {
       setReady(true)
     }
     load()
-  }, [weekNumber])
+  }, [weekNumber, year])
 
   if (!ready) return <div className="p-4">Hleður...</div>
 
   function getDays(allocId: string, list: AllocWithHousehold[]): string[] {
     const alloc = list.find((a) => a.id === allocId)
-    if (!alloc) return []
-    const days: string[] = []
-    const s = new Date(alloc.week_start)
-    for (let i = 0; i < 7; i++) days.push(addDays(s, i).toISOString().split('T')[0])
-    return days
+    return alloc ? weekDates(alloc.week_start) : []
   }
 
   async function handleSubmit() {
@@ -94,7 +91,7 @@ export default function SkiptiPage() {
       showBanner(result.error, 'error')
     } else {
       showBanner('Tillaga send')
-      router.push(`/dagatal/vika/${weekNumber}`)
+      router.push(weekHref(year, weekNumber))
     }
     setLoading(false)
   }
@@ -115,7 +112,10 @@ export default function SkiptiPage() {
         <p className="mb-2 text-sm font-medium">Þín vika — veldu viku til að bjóða:</p>
         <select
           value={allocAId}
-          onChange={(e) => { setAllocAId(e.target.value); setDaysA([]) }}
+          onChange={(e) => {
+            setAllocAId(e.target.value)
+            setDaysA([])
+          }}
           className="mb-3 w-full rounded border border-gray-300 px-3 py-2 text-sm"
         >
           <option value="">Veldu þína viku...</option>
@@ -134,7 +134,10 @@ export default function SkiptiPage() {
         <p className="mb-2 text-sm font-medium">Skipti við — veldu viku annarra:</p>
         <select
           value={allocBId}
-          onChange={(e) => { setAllocBId(e.target.value); setDaysB([]) }}
+          onChange={(e) => {
+            setAllocBId(e.target.value)
+            setDaysB([])
+          }}
           className="mb-3 w-full rounded border border-gray-300 px-3 py-2 text-sm"
         >
           <option value="">Veldu viku...</option>

@@ -1,5 +1,6 @@
 'use server'
 
+import { areDaysInWeek } from '@/lib/dates'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
@@ -34,14 +35,20 @@ export async function releaseDays(weekAllocationId: string, dates: string[]) {
     return { error: 'Aðeins eigendur geta losað daga' }
   }
 
-  const { error } = await createServiceClient().from('day_release').insert(
-    dates.map((date) => ({
-      week_allocation_id: weekAllocationId,
-      date,
-      status: 'released' as const,
-      claimed_by_household_id: null,
-    })),
-  )
+  if (!areDaysInWeek(dates, allocation.week_start)) {
+    return { error: 'Dagar verða að vera innan vikunnar' }
+  }
+
+  const { error } = await createServiceClient()
+    .from('day_release')
+    .insert(
+      dates.map((date) => ({
+        week_allocation_id: weekAllocationId,
+        date,
+        status: 'released' as const,
+        claimed_by_household_id: null,
+      })),
+    )
   if (error) return { error: error.message }
 
   const { data: households } = await supabase

@@ -95,8 +95,17 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }))
+vi.mock('@/lib/supabase/service', () => ({ createServiceClient: vi.fn() }))
+vi.mock('@/lib/email', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/email')>()),
+  sendEmail: vi.fn(),
+}))
 
+import { sendEmail } from '@/lib/email'
 import { createClient } from '@/lib/supabase/server'
+import type { FakeDb } from '@/test/fake-supabase'
+import { useDb } from '@/test/use-db'
+import { HH, USER, WEEK, WEEK10_DAYS, world } from '@/test/world'
 import { approveRequest, cancelRequest, createRequest, declineRequest } from './request'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -291,5 +300,119 @@ describe('createRequest', () => {
 
     const result = await createRequest('alloc-1', ['2026-06-04'])
     expect(result.error).toBe('Prófíll ekki fundinn')
+  })
+})
+
+// ── Behaviour against an in-memory database ──────────────────────────────────
+
+function released(db: FakeDb, allocId: string, dates: string[]) {
+  for (const date of dates) {
+    db.tables.day_release.push({
+      id: `dr-${allocId}-${date}`,
+      week_allocation_id: allocId,
+      date,
+      status: 'released',
+      claimed_by_household_id: null,
+    })
+  }
+}
+
+function pendingRequest(id: string, householdId: string, createdBy: string, days: string[]) {
+  return {
+    id,
+    year_id: 'yr-2026',
+    requesting_household_id: householdId,
+    target_week_allocation_id: WEEK.a10,
+    requested_days: days,
+    status: 'pending_releasing_head',
+    created_by: createdBy,
+  }
+}
+
+const statusOf = (db: FakeDb, id: string) => db.rows('request').find((r) => r.id === id)?.status
+
+describe('approveRequest — releasing head approves', () => {
+  it('auto-cancels only pending requests whose days overlap the approved ones', async () => {
+    const db = useDb(world(USER.headA))
+    released(db, WEEK.a10, WEEK10_DAYS)
+    db.tables.request = [
+      pendingRequest('req-b', HH.B, USER.headB, [WEEK10_DAYS[0], WEEK10_DAYS[1]]),
+      pendingRequest('req-c-overlap', HH.C, USER.headC, [WEEK10_DAYS[1], WEEK10_DAYS[2]]),
+      pendingRequest('req-c-separate', HH.C, USER.headC, [WEEK10_DAYS[5]]),
+    ]
+
+    const result = await approveRequest('req-b')
+
+    expect(result).toEqual({ success: true })
+    expect(statusOf(db, 'req-b')).toBe('approved')
+    expect(statusOf(db, 'req-c-overlap')).toBe('cancelled')
+    expect(statusOf(db, 'req-c-separate')).toBe('pending_releasing_head')
+  })
+})
+
+describe('declineRequest — already resolved', () => {
+  it('does not change status or notify when the request is no longer pending', async () => {
+    const db = useDb(world(USER.headA))
+    db.tables.request = [
+      { ...pendingRequest('req-b', HH.B, USER.headB, [WEEK10_DAYS[0]]), status: 'approved' },
+    ]
+
+    const result = await declineRequest('req-b', 'nei')
+
+    expect(result.error).toBe('Beiðni er ekki í bíðstöðu')
+    expect(statusOf(db, 'req-b')).toBe('approved')
+    expect(db.rows('notification')).toHaveLength(0)
+  })
+})
+
+describe('createRequest — validation', () => {
+  it('rejects days that are not released in the target week', async () => {
+    const db = useDb(world(USER.headB))
+    released(db, WEEK.a10, [WEEK10_DAYS[0]])
+
+    const result = await createRequest(WEEK.a10, [WEEK10_DAYS[0], WEEK10_DAYS[1]])
+
+    expect(result.error).toBe('Einn eða fleiri dagar eru ekki lausir')
+    expect(db.rows('request')).toHaveLength(0)
+  })
+
+  it('rejects requesting days in your own week', async () => {
+    const db = useDb(world(USER.headA))
+    released(db, WEEK.a10, [WEEK10_DAYS[0]])
+
+    const result = await createRequest(WEEK.a10, [WEEK10_DAYS[0]])
+
+    expect(result.error).toBe('Þetta er þín vika')
+    expect(db.rows('request')).toHaveLength(0)
+  })
+
+  it('creates a request for released days and notifies the releasing head', async () => {
+    const db = useDb(world(USER.headB))
+    released(db, WEEK.a10, [WEEK10_DAYS[0], WEEK10_DAYS[1]])
+
+    const result = await createRequest(WEEK.a10, [WEEK10_DAYS[0]])
+
+    expect(result).toEqual({ success: true })
+    expect(db.rows('request')).toMatchObject([
+      { requesting_household_id: HH.B, status: 'pending_releasing_head' },
+    ])
+    expect(db.rows('notification')).toMatchObject([
+      { user_id: USER.headA, type: 'request_received' },
+    ])
+  })
+
+  it('emails the releasing head a link straight to the request', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://baer.test'
+    const db = useDb(world(USER.headB))
+    released(db, WEEK.a10, [WEEK10_DAYS[0]])
+
+    await createRequest(WEEK.a10, [WEEK10_DAYS[0]])
+
+    const requestId = db.rows('request')[0].id
+    expect(vi.mocked(sendEmail)).toHaveBeenLastCalledWith(
+      'a@x.is',
+      expect.any(String),
+      expect.stringContaining(`href="https://baer.test/tilkynningar/beidni/${requestId}"`),
+    )
   })
 })

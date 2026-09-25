@@ -1,54 +1,32 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { DayPicker } from '@/components/forms/day-picker'
 import { setDayPlans } from '@/actions/release'
+import { DayPicker } from '@/components/forms/day-picker'
 import { useBanner } from '@/hooks/use-banner'
+import { useWeekAllocation } from '@/hooks/use-week-allocation'
+import { weekHref } from '@/lib/rotation-year'
 import { createClient } from '@/lib/supabase/client'
-import { addDays } from 'date-fns'
-import type { WeekAllocation } from '@/types/db'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function StadfestaDagaPage() {
-  const { weekNumber } = useParams<{ weekNumber: string }>()
+  const { weekNumber, year, allocation, days } = useWeekAllocation()
   const router = useRouter()
   const { showBanner } = useBanner()
-  const [allocation, setAllocation] = useState<WeekAllocation | null>(null)
   const [selected, setSelected] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
+  // Pre-load existing plans
   useEffect(() => {
-    const load = async () => {
-      const supabase = createClient()
-      const year = new Date().getFullYear()
-      const { data: yr } = await supabase.from('year').select('id').eq('year', year).single()
-      if (!yr) return
-      const { data: alloc } = await supabase
-        .from('week_allocation')
-        .select('*')
-        .eq('year_id', yr.id)
-        .eq('week_number', Number.parseInt(weekNumber))
-        .single()
-      if (!alloc) return
-      setAllocation(alloc)
-
-      // Pre-load existing plans
-      const { data: plans } = await supabase
-        .from('day_plan')
-        .select('date')
-        .eq('week_allocation_id', alloc.id)
-      setSelected((plans ?? []).map((p) => p.date))
-    }
-    load()
-  }, [weekNumber])
+    if (!allocation) return
+    createClient()
+      .from('day_plan')
+      .select('date')
+      .eq('week_allocation_id', allocation.id)
+      .then(({ data: plans }) => setSelected((plans ?? []).map((p) => p.date)))
+  }, [allocation])
 
   if (!allocation) return <div className="p-4">Hleður...</div>
-
-  const days: string[] = []
-  const start = new Date(allocation.week_start)
-  for (let i = 0; i < 7; i++) {
-    days.push(addDays(start, i).toISOString().split('T')[0])
-  }
 
   async function handleSubmit() {
     if (!allocation) return
@@ -58,7 +36,7 @@ export default function StadfestaDagaPage() {
       showBanner(result.error, 'error')
     } else {
       showBanner('Dagar staðfestir')
-      router.push(`/dagatal/vika/${weekNumber}`)
+      router.push(weekHref(year, weekNumber))
     }
     setLoading(false)
   }

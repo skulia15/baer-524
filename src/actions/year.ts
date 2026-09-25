@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { generateAllocations } from '@/lib/weeks'
+import { continueRotation, generateAllocations } from '@/lib/weeks'
 import type { Household, Year } from '@/types/db'
 import { revalidatePath } from 'next/cache'
 
@@ -25,14 +25,82 @@ async function notifyAllUsers(
 
   if (!profiles) return
 
-  await createServiceClient().from('notification').insert(
-    profiles.map((p) => ({
-      user_id: p.id,
-      type: 'allocation_changed' as const,
-      message,
-      read: false,
-    })),
-  )
+  await createServiceClient()
+    .from('notification')
+    .insert(
+      profiles.map((p) => ({
+        user_id: p.id,
+        type: 'allocation_changed' as const,
+        message,
+        read: false,
+      })),
+    )
+}
+
+export async function createYear(year: number) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Ekki innskráður' }
+
+  const { data: profile } = await supabase
+    .from('profile')
+    .select('email, household:household_id(house_id)')
+    .eq('id', user.id)
+    .single()
+  if (!profile || profile.email !== process.env.ADMIN_EMAIL)
+    return { error: 'Aðeins stjórnandi getur búið til ár' }
+  const houseId = (profile.household as unknown as { house_id: string } | null)?.house_id
+  if (!houseId) return { error: 'Heimili ekki fundið' }
+
+  const { data: existing } = await supabase
+    .from('year')
+    .select('id')
+    .eq('house_id', houseId)
+    .eq('year', year)
+    .maybeSingle()
+  if (existing) return { error: `Árið ${year} er þegar til` }
+
+  const [{ data: previous }, { data: households }] = await Promise.all([
+    supabase
+      .from('year')
+      .select('*')
+      .eq('house_id', houseId)
+      .eq('year', year - 1)
+      .maybeSingle(),
+    supabase.from('household').select('*').eq('house_id', houseId),
+  ])
+  if (!households?.length) return { error: 'Fjölskyldur ekki fundnar' }
+
+  const rotationOrder = previous
+    ? continueRotation(previous as Year, households as Household[])
+    : households.map((h) => h.id)
+
+  const { data: created, error: yearErr } = await supabase
+    .from('year')
+    .insert({
+      house_id: houseId,
+      year,
+      rotation_order: rotationOrder,
+      spring_shared_week_number: null,
+    })
+    .select()
+    .single()
+  if (yearErr || !created) return { error: yearErr?.message ?? 'Ekki tókst að búa til ár' }
+
+  const allocations = generateAllocations(created as Year, households as Household[])
+  const { error: allocErr } = await supabase.from('week_allocation').insert(allocations)
+  if (allocErr) {
+    await supabase.from('year').delete().eq('id', created.id)
+    return { error: allocErr.message }
+  }
+
+  await notifyAllUsers(supabase, houseId, `Dagatal ${year} er tilbúið`)
+
+  revalidatePath('/dagatal')
+  return { success: true }
 }
 
 export async function saveRotation(yearId: string, rotationOrder: string[]) {
@@ -103,8 +171,13 @@ export async function updateSpringWeek(yearId: string, weekNumber: number | null
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Ekki innskráður' }
 
-  const { data: profile } = await supabase.from('profile').select('email').eq('id', user.id).single()
-  if (!profile || profile.email !== process.env.ADMIN_EMAIL) return { error: 'Aðeins stjórnandi getur stillt vorsviku' }
+  const { data: profile } = await supabase
+    .from('profile')
+    .select('email')
+    .eq('id', user.id)
+    .single()
+  if (!profile || profile.email !== process.env.ADMIN_EMAIL)
+    return { error: 'Aðeins stjórnandi getur stillt vorsviku' }
 
   const { data: yearRecord } = await supabase.from('year').select('*').eq('id', yearId).single()
   if (!yearRecord) return { error: 'Ár ekki fundið' }

@@ -1,13 +1,12 @@
 'use server'
 
-import { sendEmail } from '@/lib/email'
+import { areDaysInWeek, weekDates } from '@/lib/dates'
+import { notificationEmailHtml, sendEmail } from '@/lib/email'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
-const APP_URL = 'https://baer524.vercel.app/dagatal'
-
-function emailHtml(message: string, senderMessage?: string | null) {
-  return `<p>Bær 524: ${message}</p>${senderMessage ? `<p><em>"${senderMessage}"</em></p>` : ''}<p><a href="${APP_URL}">Opna app</a></p>`
+function emailHtml(swapId: string, message: string, senderMessage?: string | null) {
+  return notificationEmailHtml(message, `/tilkynningar/skipti/${swapId}`, senderMessage)
 }
 
 export async function createSwap(
@@ -33,7 +32,7 @@ export async function createSwap(
 
   const { data: allocationA } = await supabase
     .from('week_allocation')
-    .select('year_id, household_id, week_number')
+    .select('year_id, household_id, week_number, week_start')
     .eq('id', allocationAId)
     .single()
   if (!allocationA) return { error: 'Vika A ekki fundin' }
@@ -41,10 +40,20 @@ export async function createSwap(
 
   const { data: allocationB } = await supabase
     .from('week_allocation')
-    .select('household_id, week_number')
+    .select('household_id, week_number, week_start')
     .eq('id', allocationBId)
     .single()
   if (!allocationB) return { error: 'Vika B ekki fundin' }
+  if (!allocationB.household_id || allocationB.household_id === profile.household_id) {
+    return { error: 'Veldu viku annarrar fjölskyldu' }
+  }
+
+  if (
+    !areDaysInWeek(daysA, allocationA.week_start) ||
+    !areDaysInWeek(daysB, allocationB.week_start)
+  ) {
+    return { error: 'Dagar verða að vera innan viðkomandi viku' }
+  }
 
   const isHead = profile.role === 'head'
   const status = isHead ? 'pending_other_head' : 'pending_own_head'
@@ -87,7 +96,11 @@ export async function createSwap(
           message,
           read: false,
         })
-      void sendEmail(otherHead.email, 'Skiptatillaga móttekin', emailHtml(message, senderMessage))
+      void sendEmail(
+        otherHead.email,
+        'Skiptatillaga móttekin',
+        emailHtml(swap.id, message, senderMessage),
+      )
     }
   } else {
     const { data: ownHead } = await supabase
@@ -112,7 +125,7 @@ export async function createSwap(
       void sendEmail(
         ownHead.email,
         'Fjölskyldumeðlimur bíður samþykkis',
-        emailHtml(message, senderMessage),
+        emailHtml(swap.id, message, senderMessage),
       )
     }
   }
@@ -164,7 +177,11 @@ export async function approveSwap(swapId: string) {
           message,
           read: false,
         })
-      void sendEmail(otherHead.email, 'Skiptatillaga bíður samþykkis þíns', emailHtml(message))
+      void sendEmail(
+        otherHead.email,
+        'Skiptatillaga bíður samþykkis þíns',
+        emailHtml(swapId, message),
+      )
     }
 
     return { success: true }
@@ -177,26 +194,71 @@ export async function approveSwap(swapId: string) {
 
     const { data: allocA } = await supabase
       .from('week_allocation')
-      .select('household_id')
+      .select('household_id, week_start')
       .eq('id', swap.allocation_a_id)
       .single()
     const { data: allocB } = await supabase
       .from('week_allocation')
-      .select('household_id')
+      .select('household_id, week_start')
       .eq('id', swap.allocation_b_id)
       .single()
 
     if (!allocA || !allocB) return { error: 'Vikur ekki fundnar' }
 
-    await supabase
-      .from('week_allocation')
-      .update({ household_id: allocB.household_id })
-      .eq('id', swap.allocation_a_id)
+    const daysA: string[] = swap.days_a
+    const daysB: string[] = swap.days_b
 
-    await supabase
-      .from('week_allocation')
-      .update({ household_id: allocA.household_id })
-      .eq('id', swap.allocation_b_id)
+    const [{ data: takenA }, { data: takenB }] = await Promise.all([
+      supabase
+        .from('day_release')
+        .select('id')
+        .eq('week_allocation_id', swap.allocation_a_id)
+        .eq('status', 'claimed')
+        .in('date', daysA),
+      supabase
+        .from('day_release')
+        .select('id')
+        .eq('week_allocation_id', swap.allocation_b_id)
+        .eq('status', 'claimed')
+        .in('date', daysB),
+    ])
+    if (takenA?.length || takenB?.length) {
+      return { error: 'Einn eða fleiri dagar eru þegar teknir' }
+    }
+    const isFullWeek = (days: string[], weekStart: string) =>
+      weekDates(weekStart).every((d) => days.includes(d))
+
+    if (isFullWeek(daysA, allocA.week_start) && isFullWeek(daysB, allocB.week_start)) {
+      // Whole weeks traded: move ownership so the calendar shows the new owner
+      await supabase
+        .from('week_allocation')
+        .update({ household_id: allocB.household_id })
+        .eq('id', swap.allocation_a_id)
+
+      await supabase
+        .from('week_allocation')
+        .update({ household_id: allocA.household_id })
+        .eq('id', swap.allocation_b_id)
+    } else {
+      // Partial: each side's chosen days are claimed by the other household
+      const claim = (allocationId: string, days: string[], householdId: string) =>
+        days.map((date) => ({
+          week_allocation_id: allocationId,
+          date,
+          status: 'claimed' as const,
+          claimed_by_household_id: householdId,
+        }))
+      const { error: claimErr } = await supabase
+        .from('day_release')
+        .upsert(
+          [
+            ...claim(swap.allocation_a_id, daysA, swap.household_b_id),
+            ...claim(swap.allocation_b_id, daysB, swap.household_a_id),
+          ],
+          { onConflict: 'week_allocation_id,date' },
+        )
+      if (claimErr) return { error: claimErr.message }
+    }
 
     await supabase
       .from('swap_proposal')
@@ -220,7 +282,8 @@ export async function approveSwap(swapId: string) {
       .select('email')
       .eq('id', swap.created_by)
       .single()
-    if (creator) void sendEmail(creator.email, 'Skiptatillaga þín samþykkt', emailHtml(message))
+    if (creator)
+      void sendEmail(creator.email, 'Skiptatillaga þín samþykkt', emailHtml(swapId, message))
 
     return { success: true }
   }
@@ -257,7 +320,7 @@ export async function declineSwap(swapId: string, reason?: string) {
     return { error: 'Þú getur ekki hafnað þessari tillögu' }
   }
 
-  await supabase
+  const { data: declined, error: declineErr } = await supabase
     .from('swap_proposal')
     .update({
       status: 'declined',
@@ -266,6 +329,9 @@ export async function declineSwap(swapId: string, reason?: string) {
     })
     .eq('id', swapId)
     .in('status', ['pending_own_head', 'pending_other_head'])
+    .select('id')
+  if (declineErr) return { error: declineErr.message }
+  if (!declined?.length) return { error: 'Tillaga er ekki í bíðstöðu' }
 
   const declineMessage = reason ? `Skiptatillögu hafnað: ${reason}` : 'Skiptatillögu hafnað'
   await createServiceClient()
@@ -284,7 +350,8 @@ export async function declineSwap(swapId: string, reason?: string) {
     .select('email')
     .eq('id', swap.created_by)
     .single()
-  if (creator) void sendEmail(creator.email, 'Skiptatillögu hafnað', emailHtml(declineMessage))
+  if (creator)
+    void sendEmail(creator.email, 'Skiptatillögu hafnað', emailHtml(swapId, declineMessage))
 
   return { success: true }
 }

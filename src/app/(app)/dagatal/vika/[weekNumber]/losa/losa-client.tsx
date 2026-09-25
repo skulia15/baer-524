@@ -3,45 +3,20 @@
 import { releaseDays } from '@/actions/release'
 import { DayPicker } from '@/components/forms/day-picker'
 import { useBanner } from '@/hooks/use-banner'
-import { createClient } from '@/lib/supabase/client'
-import type { WeekAllocation } from '@/types/db'
-import { addDays } from 'date-fns'
+import { useWeekAllocation } from '@/hooks/use-week-allocation'
+import { weekHref } from '@/lib/rotation-year'
 import { ChevronLeft } from 'lucide-react'
-import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export function LosaClient() {
-  const { weekNumber } = useParams<{ weekNumber: string }>()
+  const { weekNumber, year, allocation, days } = useWeekAllocation()
   const router = useRouter()
   const { showBanner } = useBanner()
-  const [allocation, setAllocation] = useState<WeekAllocation | null>(null)
   const [selected, setSelected] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      const supabase = createClient()
-      const year = new Date().getFullYear()
-      const { data: yr } = await supabase.from('year').select('id').eq('year', year).single()
-      if (!yr) return
-      const { data } = await supabase
-        .from('week_allocation')
-        .select('*')
-        .eq('year_id', yr.id)
-        .eq('week_number', Number.parseInt(weekNumber))
-        .single()
-      setAllocation(data)
-    }
-    load()
-  }, [weekNumber])
-
   if (!allocation) return <div className="p-4 text-sm text-stone-500">Hleður...</div>
-
-  const days: string[] = []
-  const start = new Date(allocation.week_start)
-  for (let i = 0; i < 7; i++) {
-    days.push(addDays(start, i).toISOString().split('T')[0])
-  }
 
   async function handleSubmit() {
     if (!allocation || selected.length === 0) return
@@ -51,7 +26,7 @@ export function LosaClient() {
       showBanner(result.error, 'error')
     } else {
       showBanner('Dagar losaðir')
-      router.push(`/dagatal/vika/${weekNumber}`)
+      router.push(weekHref(year, weekNumber))
     }
     setLoading(false)
   }

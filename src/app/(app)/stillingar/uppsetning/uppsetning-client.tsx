@@ -1,19 +1,25 @@
 'use client'
 
-import { saveRotation, updateSpringWeek } from '@/actions/year'
+import { createYear, saveRotation, updateSpringWeek } from '@/actions/year'
 import { RotationSorter } from '@/components/forms/rotation-sorter'
 import { useBanner } from '@/hooks/use-banner'
 import { formatWeekRange } from '@/lib/dates'
+import { yearFromParam } from '@/lib/rotation-year'
 import { createClient } from '@/lib/supabase/client'
 import { SPRING_WEEK_HAS_OWNER, generateAllocations } from '@/lib/weeks'
 import type { Household, Year } from '@/types/db'
 import { ChevronLeft } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export function UppsetningClient() {
   const router = useRouter()
   const { showBanner } = useBanner()
+  const year = yearFromParam(useSearchParams().get('ar'))
+  const [missing, setMissing] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [households, setHouseholds] = useState<Household[]>([])
   const [yearRecord, setYearRecord] = useState<Year | null>(null)
   const [order, setOrder] = useState<string[]>([])
@@ -25,9 +31,13 @@ export function UppsetningClient() {
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
-      const year = new Date().getFullYear()
-      const { data: yr } = await supabase.from('year').select('*').eq('year', year).single()
-      if (!yr) return
+      const { data: yr } = await supabase.from('year').select('*').eq('year', year).maybeSingle()
+      setMissing(!yr)
+      if (!yr) {
+        setYearRecord(null)
+        setOrder([])
+        return
+      }
       setYearRecord(yr)
       setOrder(yr.rotation_order)
       setSpringWeekState(yr.spring_shared_week_number)
@@ -40,7 +50,7 @@ export function UppsetningClient() {
       setHouseholds(hh ?? [])
     }
     load()
-  }, [])
+  }, [year, reloadKey])
 
   const preview =
     yearRecord && households.length > 0
@@ -60,9 +70,21 @@ export function UppsetningClient() {
       showBanner(result.error, 'error')
     } else {
       showBanner('Snúningsröð vistuð')
-      router.push('/dagatal')
+      router.push(`/dagatal?ar=${year}`)
     }
     setLoading(false)
+  }
+
+  async function handleCreateYear() {
+    setCreating(true)
+    const result = await createYear(year)
+    if (result.error) {
+      showBanner(result.error, 'error')
+    } else {
+      showBanner(`Árið ${year} búið til`)
+      setReloadKey((k) => k + 1)
+    }
+    setCreating(false)
   }
 
   async function handleSaveSpringWeek() {
@@ -87,8 +109,31 @@ export function UppsetningClient() {
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h1 className="font-semibold text-stone-900">Uppsetning {new Date().getFullYear()}</h1>
+        <h1 className="font-semibold text-stone-900">Uppsetning {year}</h1>
+        <Link
+          href={`/stillingar/uppsetning?ar=${year + 1}`}
+          className="ml-auto text-sm font-medium text-green-700"
+        >
+          {year + 1} →
+        </Link>
       </div>
+
+      {missing && (
+        <section className="mb-6 rounded-xl bg-stone-50 p-4">
+          <p className="mb-3 text-sm text-stone-600">
+            Árið {year} hefur ekki verið sett upp. Snúningsröðin heldur áfram þar sem {year - 1}{' '}
+            endaði og hægt er að breyta henni á eftir.
+          </p>
+          <button
+            type="button"
+            onClick={handleCreateYear}
+            disabled={creating}
+            className="w-full rounded-xl bg-green-700 py-3 text-sm font-medium text-white transition-colors hover:bg-green-800 disabled:opacity-50"
+          >
+            {creating ? 'Býr til...' : `Búa til ${year}`}
+          </button>
+        </section>
+      )}
 
       <section className="mb-6">
         <p className="mb-3 text-sm font-medium text-stone-700">Snúningsröð:</p>
