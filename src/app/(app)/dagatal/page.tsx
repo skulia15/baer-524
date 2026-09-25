@@ -1,6 +1,7 @@
 import { CalendarViewClient } from '@/components/calendar/calendar-view-client'
 import { ActionBar } from '@/components/ui/action-bar'
 import { isAdmin } from '@/lib/admin'
+import { openReleases } from '@/lib/open-releases'
 import { yearFromParam } from '@/lib/rotation-year'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
@@ -86,11 +87,26 @@ export default async function DagatalPage({
     pendingCount = (reqCount ?? 0) + (swapCount ?? 0)
   }
 
+  const openDayCount = openReleases({
+    weeks: allocations ?? [],
+    releases: releases ?? [],
+    householdId: profile.household_id,
+    today: new Date().toISOString().slice(0, 10),
+  }).reduce((n, w) => n + w.dates.length, 0)
+
   return (
     <div>
       <div className="sticky top-0 z-10 bg-white">
         <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
           <h1 className="font-display text-xl font-semibold text-stone-900">Bær 524</h1>
+          {openDayCount > 0 && (
+            <Link
+              href="/dagatal/laust"
+              className="rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-700"
+            >
+              {openDayCount} {openDayCount === 1 ? 'laus dagur' : 'lausir dagar'}
+            </Link>
+          )}
         </div>
         {profile.role === 'head' && <ActionBar pendingCount={pendingCount} />}
       </div>

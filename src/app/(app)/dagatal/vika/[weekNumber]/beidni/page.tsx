@@ -5,19 +5,33 @@ import { DayPicker } from '@/components/forms/day-picker'
 import { useBanner } from '@/hooks/use-banner'
 import { useWeekAllocation } from '@/hooks/use-week-allocation'
 import { weekHref } from '@/lib/rotation-year'
+import { createClient } from '@/lib/supabase/client'
 import { ChevronLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function BidniPage() {
-  const { weekNumber, year, allocation, days: allDays } = useWeekAllocation()
+  const { weekNumber, year, allocation } = useWeekAllocation()
   const router = useRouter()
   const { showBanner } = useBanner()
   const [selected, setSelected] = useState<string[]>([])
   const [senderMessage, setSenderMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  // Only released (unclaimed) days can be requested
+  const [allDays, setAllDays] = useState<string[] | null>(null)
 
-  if (!allocation) return <div className="p-4 text-sm text-stone-500">Hleður...</div>
+  useEffect(() => {
+    if (!allocation) return
+    createClient()
+      .from('day_release')
+      .select('date')
+      .eq('week_allocation_id', allocation.id)
+      .eq('status', 'released')
+      .order('date')
+      .then(({ data }) => setAllDays((data ?? []).map((r) => r.date)))
+  }, [allocation])
+
+  if (!allocation || !allDays) return <div className="p-4 text-sm text-stone-500">Hleður...</div>
 
   async function handleSubmit() {
     if (!allocation || selected.length === 0) return
@@ -45,7 +59,11 @@ export default function BidniPage() {
         <h1 className="font-semibold text-stone-900">Óska eftir dögum — Vika {weekNumber}</h1>
       </div>
       <p className="mb-4 text-sm text-stone-500">Veldu daga sem þú óskar eftir:</p>
-      <DayPicker days={allDays} value={selected} onChange={setSelected} />
+      {allDays.length === 0 ? (
+        <p className="text-sm text-stone-400">Engir lausir dagar í þessari viku.</p>
+      ) : (
+        <DayPicker days={allDays} value={selected} onChange={setSelected} />
+      )}
       <textarea
         value={senderMessage}
         onChange={(e) => setSenderMessage(e.target.value)}
